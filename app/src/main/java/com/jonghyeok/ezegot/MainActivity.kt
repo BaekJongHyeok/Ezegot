@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityOptionsCompat
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
 
 class MainActivity : ComponentActivity() {
@@ -56,26 +57,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             Egegot_mkTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { paddingValues ->
-                    MainContent(modifier = Modifier.padding(paddingValues))
-                }
+                MainScreen()
             }
         }
-    }
-}
-
-@Composable
-fun MainContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5)),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        MainScreen()
     }
 }
 
@@ -156,7 +140,7 @@ fun MainScreen() {
                             .padding(horizontal = 4.dp)
                             .size(8.dp)
                             .background(
-                                if (currentPage.value == index) Color(0xFF87CEEB) else Color.Gray,
+                                if (currentPage.value == index) Color(0xFFA5A5A5) else Color(0xFFD9D9D9),
                                 shape = CircleShape
                             )
                     )
@@ -304,11 +288,16 @@ fun SearchBar() {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(52.dp)
                     .background(color = Color(0xFFFFFFFF))
-                    .clickable { // 클릭 이벤트 처리
+                    .clickable {
                         val intent = Intent(context, SearchActivity::class.java)
-                        context.startActivity(intent)
+                        val options = ActivityOptionsCompat.makeCustomAnimation(
+                            context,
+                            android.R.anim.fade_in, // 새로운 액티비티가 나타날 때의 애니메이션
+                            android.R.anim.fade_out // 기존 액티비티가 사라질 때의 애니메이션
+                        )
+                        context.startActivity(intent, options.toBundle())
                     },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -365,11 +354,17 @@ fun SearchBar() {
 
 @Composable
 fun FavoriteCard(station: FavoriteStation) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .width(168.dp)
             .height(206.dp)
-            .padding(start = 6.dp, end = 6.dp), // 각 카드 사이 간격
+            .padding(start = 6.dp, end = 6.dp) // 각 카드 사이 간격
+            .clickable { // 클릭 이벤트 처리
+                val intent = Intent(context, StationActivity::class.java)
+                context.startActivity(intent)
+            },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp), // CardElevation으로 설정
         colors = CardDefaults.cardColors(containerColor = Color.White) // 배경색 설정
