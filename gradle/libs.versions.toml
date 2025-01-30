@@ -1,5 +1,6 @@
 [versions]
 agp = "8.6.0"
+converterSimplexml = "2.9.0"
 gson = "2.10.1"
 kotlin = "1.9.0"
 coreKtx = "1.15.0"
@@ -12,9 +13,11 @@ composeBom = "2024.04.01"
 mapsCompose = "2.11.4"
 playServicesLocation = "21.3.0"
 playServicesMaps = "19.0.0"
+retrofit = "2.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+converter-simplexml = { module = "com.squareup.retrofit2:converter-simplexml", version.ref = "converterSimplexml" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -32,6 +35,7 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

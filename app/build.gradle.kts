@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.utils.isKotlinKaptPluginApplied
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -67,10 +69,15 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    // Google Map 추가
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
     implementation(libs.maps.compose)
 
     // Gson 라이브러리 추가
     implementation(libs.gson)
+
+    // Retrofit 추가
+    implementation(libs.retrofit)
+    implementation(libs.converter.simplexml)
 }

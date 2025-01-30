@@ -2,6 +2,7 @@ package com.jonghyeok.ezegot
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -56,24 +57,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.jonghyeok.ezegot.api.StationInfoDTO
+import com.jonghyeok.ezegot.ui.theme.App_Background_Color
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
 
-// 전체 지하철역 이름 리스트
-val allStationsWithLines = listOf(
-    SearchItem("금정역", "1호선"),
-    SearchItem("서울역", "1호선"),
-    SearchItem("서울역", "4호선"),
-    SearchItem("강남역", "2호선"),
-    SearchItem("홍대입구역", "2호선"),
-    SearchItem("홍대입구역", "6호선"),
-    SearchItem("잠실역", "2호선"),
-    SearchItem("사당역", "4호선"),
-    SearchItem("강동역", "5호선"),
-    SearchItem("고속터미널역", "9호선"),
-    SearchItem("수원역", "1호선"),
-    SearchItem("수원역", "수인분당선"),
-    SearchItem("매탄권선역", "수인분당선"),
-)
+lateinit var allStationsWithLine: List<StationInfoDTO>
 
 class SearchActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,6 +74,21 @@ class SearchActivity : ComponentActivity() {
                     SearchContent(modifier = Modifier.padding(paddingValues))
                 }
             }
+        }
+
+        allStationsWithLine = getStationListFromPreferences()
+    }
+
+    private fun getStationListFromPreferences(): List<StationInfoDTO> {
+        val sharedPreferences: SharedPreferences = getSharedPreferences("default", MODE_PRIVATE)
+        val json = sharedPreferences.getString("stationList", null)
+
+        return if (json != null) {
+            val gson = Gson()
+            val stationListType = object : TypeToken<List<StationInfoDTO>>() {}.type
+            gson.fromJson(json, stationListType)
+        } else {
+            emptyList() // 예외 처리: 데이터가 없으면 빈 리스트 반환
         }
     }
 
@@ -106,18 +109,15 @@ fun SearchContent(modifier: Modifier = Modifier) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
-    // 자동으로 키보드를 표시하기 위해 LaunchedEffect 사용
     LaunchedEffect(Unit) {
-        // 포커스를 자동으로 요청
-        focusRequester.requestFocus()
-        // 키보드를 표시
-        keyboardController?.show()
+        focusRequester.requestFocus() // 포커스를 자동으로 요청
+        keyboardController?.show()  // 키보드를 표시
     }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5)),
+            .background(App_Background_Color),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -161,10 +161,11 @@ fun SearchScreen(focusRequester: FocusRequester) {
 
 @Composable
 fun SearchTextBar(focusRequester: FocusRequester, textState: TextFieldValue, onTextChange: (TextFieldValue) -> Unit) {
+    val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
     // 입력된 텍스트로 필터링된 지하철역 리스트
-    val filteredStations = allStationsWithLines.filter {
+    val filteredStations = allStationsWithLine.filter {
         it.stationName.contains(textState.text, ignoreCase = true)
     }
 
@@ -245,38 +246,40 @@ fun SearchTextBar(focusRequester: FocusRequester, textState: TextFieldValue, onT
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 10.dp)
+                .clickable {}
         ) {
             items(filteredStations) { searchItem ->
-                SearchItemRow(searchItem = searchItem)
+                SearchItemRow(
+                    searchItem = searchItem,
+                    onClick = {
+                        // 아이템 클릭 시 StationActivity로 이동
+                        val intent = Intent(context, StationActivity::class.java).apply {
+                            putExtra("station_name", searchItem.stationName)
+                            putExtra("line", searchItem.lineNumber)
+                        }
+                        // 최근 검색에 추가
+                        val recentSearchItem = RecentSearchItem(
+                            stationName = searchItem.stationName,
+                            line = searchItem.lineNumber,
+                            date = getCurrentDate()
+                        )
+                        saveRecentSearch(recentSearchItem, context) // 최근 검색 저장 함수 호출
+                        context.startActivity(intent)
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun SearchItemRow(searchItem: SearchItem) {
-    val context = LocalContext.current
-
+fun SearchItemRow(searchItem: StationInfoDTO, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(4.dp)
             .background(Color.White, RoundedCornerShape(8.dp))
-            .clickable {
-                // 아이템 클릭 시 StationActivity로 이동
-                val intent = Intent(context, StationActivity::class.java).apply {
-                    putExtra("stationName", searchItem.stationName)
-                    putExtra("line", searchItem.line)
-                }
-                // 최근 검색에 추가
-                val recentSearchItem = RecentSearchItem(
-                    stationName = searchItem.stationName,
-                    line = searchItem.line,
-                    date = getCurrentDate()
-                )
-                saveRecentSearch(recentSearchItem, context) // 최근 검색 저장 함수 호출
-                context.startActivity(intent)
-            }
+            .clickable { onClick() }
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -293,7 +296,7 @@ fun SearchItemRow(searchItem: SearchItem) {
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                text = searchItem.line,
+                text = searchItem.lineNumber,
                 style = TextStyle(color = Color(0xFF868686), fontSize = 14.sp, fontWeight = FontWeight.Medium)
             )
         }

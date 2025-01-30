@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen() {
+    val context = LocalContext.current
     val favoriteStations = listOf(
         FavoriteStation("수원", listOf("왕십리", "왕십리", "고색", "인천"), listOf("5분", "17분", "4분", "11분"), R.drawable.suinline),
         FavoriteStation("수원", listOf("청량리", "동묘앞", "천안", "신창"), listOf("2분", "8분", "4분", "13분"), R.drawable.ic_line1),
@@ -210,7 +211,11 @@ fun MainScreen() {
                                 spotColor = Color(0xFF7090B0),
                                 clip = false // 그림자 밖의 요소를 클립하지 않음
                             )
-                            .clip(RoundedCornerShape(12.dp)), // 둥근 모서리 설정
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { // 클릭 이벤트 처리
+                                val intent = Intent(context, StationActivity::class.java)
+                                context.startActivity(intent)
+                            }, // 둥근 모서리 설정
                         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp), // 그림자 효과
                         colors = CardDefaults.cardColors(containerColor = Color.White) // 배경색 설정
                     ) {
