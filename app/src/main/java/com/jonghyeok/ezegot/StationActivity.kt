@@ -3,8 +3,10 @@ package com.jonghyeok.ezegot
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -27,9 +29,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -44,7 +45,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jonghyeok.ezegot.api.RetrofitInstance
 import com.jonghyeok.ezegot.ui.theme.App_Background_Color
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
 
@@ -55,6 +55,12 @@ class StationActivity : ComponentActivity() {
         val stationName = intent.getStringExtra("station_name") ?: "역 정보 없음"
         val line = intent.getStringExtra("line") ?: "선 정보 없음"
 
+        val viewModel: StationViewModel by viewModels()
+
+        // API 호출을 Activity에서 한 번만 수행
+        viewModel.fetchStationArrivalInfo(stationName)
+        viewModel.checkIfStationIsSaved(stationName)
+
         setContent {
             Egegot_mkTheme {
                 Scaffold(
@@ -63,7 +69,8 @@ class StationActivity : ComponentActivity() {
                     StationContent(
                         modifier = Modifier.padding(paddingValues),
                         stationName = stationName,
-                        line = line
+                        line = line,
+                        viewModel = viewModel
                     )
                 }
             }
@@ -72,17 +79,9 @@ class StationActivity : ComponentActivity() {
 }
 
 @Composable
-fun StationContent(modifier: Modifier = Modifier, stationName: String, line: String) {
-    val stationArrivalInfo = remember { mutableStateOf<List<Arrival>>(emptyList()) }
-
-    LaunchedEffect(Unit) {
-        try {
-            val response = RetrofitInstance.api2.getStationArrivalInfo(stationName)
-            stationArrivalInfo.value = response.arrivals // 데이터 저장
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
+fun StationContent(modifier: Modifier = Modifier, stationName: String, line: String, viewModel: StationViewModel) {
+    val stationArrivalInfo by viewModel.stationArrivalInfo.collectAsState()
+    val isSaved by viewModel.isSaved.collectAsState()
 
     Column(
         modifier = modifier
@@ -94,13 +93,15 @@ fun StationContent(modifier: Modifier = Modifier, stationName: String, line: Str
         StationScreen(
             stationName = stationName,
             line = line,
-            stationArrivalInfo = stationArrivalInfo.value
+            stationArrivalInfo = stationArrivalInfo,
+            isSaved = isSaved,
+            onFavoriteClick = { viewModel.toggleStationFavorite(stationName) }
         )
     }
 }
 
 @Composable
-fun StationScreen(stationName: String, line: String, stationArrivalInfo: List<Arrival>) {
+fun StationScreen(stationName: String, line: String, stationArrivalInfo: List<Arrival>, isSaved: Boolean, onFavoriteClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = App_Background_Color // 화면 배경 색상 설정
@@ -115,11 +116,11 @@ fun StationScreen(stationName: String, line: String, stationArrivalInfo: List<Ar
 
             Spacer(Modifier.height(20.dp))
 
-            ButtonBar()
+            ButtonBar(isSaved, onFavoriteClick)
 
             Spacer(Modifier.height(20.dp))
 
-            ArrivalCardRow(stationArrivalInfo)
+            ArrivalCardRow(stationArrivalInfo, line)
 
             Spacer(Modifier.height(20.dp))
 
@@ -187,7 +188,7 @@ fun StationTitleBar(stationName: String, line: String) {
 }
 
 @Composable
-fun ButtonBar() {
+fun ButtonBar(isSaved: Boolean, onFavoriteClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -208,12 +209,15 @@ fun ButtonBar() {
         horizontalArrangement = Arrangement.SpaceAround
     ) {
         Column(
+            modifier = Modifier.clickable { onFavoriteClick() },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 modifier = Modifier.size(20.dp),
-                painter = painterResource(id = R.drawable.ic_favorite_off),
-                contentDescription = "Favorite Off Icon",
+                painter = painterResource(
+                    id = if (isSaved) R.drawable.ic_favorite_on else R.drawable.ic_favorite_off
+                ),
+                contentDescription = "Favorite Icon",
             )
 
             Spacer(Modifier.height(8.dp))
@@ -310,10 +314,27 @@ fun ButtonBar() {
 }
 
 @Composable
-fun ArrivalCardRow(stationArrivalInfo: List<Arrival>) {
-    // 상행, 하행으로 분리
-    val upboundArrivals = stationArrivalInfo.take(2)
-    val downboundArrivals = stationArrivalInfo.drop(2).take(2)
+fun ArrivalCardRow(stationArrivalInfo: List<Arrival>, line: String) {
+    val lineId = SubwayLine.getLineId(line)
+
+    var upDt = "";
+    var dnDt = "";
+    val upArrivalInfo = mutableListOf<Arrival>()
+    val downArrivalInfo = mutableListOf<Arrival>()
+
+    stationArrivalInfo.forEach { arrival ->
+        if (arrival.subwayId != lineId) {
+            return@forEach
+        }
+
+        if (arrival.updnLine == "상행") {
+            upArrivalInfo.add(arrival)
+            upDt = arrival.bstatnNm
+        } else {
+            downArrivalInfo.add(arrival)
+            dnDt = arrival.bstatnNm
+        }
+    }
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxWidth(),
@@ -328,34 +349,34 @@ fun ArrivalCardRow(stationArrivalInfo: List<Arrival>) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // 상행 카드에 두 개의 도착 정보 표시
-            ArrivalCard(cardWidth, upboundArrivals, "상행")
+            ArrivalCard(cardWidth, upArrivalInfo, upDt)
 
             // 하행 카드에 두 개의 도착 정보 표시
-            ArrivalCard(cardWidth, downboundArrivals, "하행")
+            ArrivalCard(cardWidth, downArrivalInfo, dnDt)
         }
     }
 }
 
 @Composable
-fun ArrivalCard(cardWidth: Dp, arrivals: List<Arrival>, direction: String) {
+fun ArrivalCard(cardWidth: Dp, arrivals: List<Arrival>, dt: String) {
     Card(
         modifier = Modifier
             .width(cardWidth)
             .height(206.dp),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 16.dp)
                 .padding(top = 20.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Top
         ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = direction,
+                text = "$dt 방면",
                 fontSize = 18.sp,
                 color = Color(0xFF2F2F2F),
                 fontWeight = FontWeight.SemiBold
@@ -365,11 +386,12 @@ fun ArrivalCard(cardWidth: Dp, arrivals: List<Arrival>, direction: String) {
 
             // 각 Arrival 정보 렌더링
             arrivals.forEach { arrival ->
-                val trainLineName = arrival.trainLineName.takeWhile { it != '행' } + "행"
-                val arrivalMsg = arrival.arrivalMessage.takeWhile { it != '(' }
+                val trainLineName = arrival.trainLineName.takeWhile { it != '행' }
+                val arrivalMsg = arrival.arrivalMessage1.takeWhile { it != '(' }
 
-                Column (
-                    modifier = Modifier.fillMaxWidth()
+                Row (
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = trainLineName,
@@ -570,6 +592,5 @@ fun StationInfoBar() {
 @Composable
 fun StationPreview() {
     Egegot_mkTheme {
-
     }
 }
