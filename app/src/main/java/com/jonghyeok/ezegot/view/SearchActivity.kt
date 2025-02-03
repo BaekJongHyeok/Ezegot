@@ -1,12 +1,11 @@
-package com.jonghyeok.ezegot
+package com.jonghyeok.ezegot.view
 
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,16 +26,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,48 +44,41 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import com.jonghyeok.ezegot.api.StationInfoDTO
+import com.jonghyeok.ezegot.R
+import com.jonghyeok.ezegot.RecentSearchItem
+import com.jonghyeok.ezegot.SharedPreferenceManager
+import com.jonghyeok.ezegot.TitleBar
+import com.jonghyeok.ezegot.dto.StationInfo
+import com.jonghyeok.ezegot.modelFactory.SearchViewModelFactory
+import com.jonghyeok.ezegot.repository.SearchRepository
 import com.jonghyeok.ezegot.ui.theme.App_Background_Color
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
-
-lateinit var allStationsWithLine: List<StationInfoDTO>
+import com.jonghyeok.ezegot.viewModel.SearchViewModel
 
 class SearchActivity : ComponentActivity() {
+    private val viewModel: SearchViewModel by viewModels {
+        SearchViewModelFactory(SearchRepository(SharedPreferenceManager(this)))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             Egegot_mkTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { paddingValues ->
-                    SearchContent(modifier = Modifier.padding(paddingValues))
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = App_Background_Color
+                ) {
+                    SearchScreen(viewModel)
                 }
             }
-        }
-
-        allStationsWithLine = getStationListFromPreferences()
-    }
-
-    private fun getStationListFromPreferences(): List<StationInfoDTO> {
-        val sharedPreferences: SharedPreferences = getSharedPreferences("default", MODE_PRIVATE)
-        val json = sharedPreferences.getString("stationList", null)
-
-        return if (json != null) {
-            val gson = Gson()
-            val stationListType = object : TypeToken<List<StationInfoDTO>>() {}.type
-            gson.fromJson(json, stationListType)
-        } else {
-            emptyList() // 예외 처리: 데이터가 없으면 빈 리스트 반환
         }
     }
 
@@ -105,69 +95,62 @@ class SearchActivity : ComponentActivity() {
 }
 
 @Composable
-fun SearchContent(modifier: Modifier = Modifier) {
-    val keyboardController = LocalSoftwareKeyboardController.current
+fun SearchScreen(viewModel: SearchViewModel) {
+    val context = LocalContext.current
+    val recentSearches: List<RecentSearchItem> by viewModel.recentSearches.collectAsState()
+    val filteredStations by viewModel.filteredStations.collectAsState()
+    var textState by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus() // 포커스를 자동으로 요청
         keyboardController?.show()  // 키보드를 표시
+        viewModel.loadRecentSearches()
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(App_Background_Color),
-        verticalArrangement = Arrangement.Top,
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        SearchScreen(focusRequester = focusRequester)
-    }
-}
+        // 타이틀 바
+        TitleBar()
 
-@Composable
-fun SearchScreen(focusRequester: FocusRequester) {
-    var textState by remember { mutableStateOf(TextFieldValue("")) }
+        // 검색바
+        SearchTextBar(viewModel,
+            textState = textState,
+            onTextChange = { textState = it },
+            filteredStations = filteredStations,
+            focusRequester = focusRequester,
+            keyboardController = keyboardController
+        )
 
-    val lifecycleOwner = rememberUpdatedState(LocalContext.current as androidx.lifecycle.LifecycleOwner)
-    LaunchedEffect(lifecycleOwner.value.lifecycle) {
-        lifecycleOwner.value.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onResume(owner: androidx.lifecycle.LifecycleOwner) {
-                super.onResume(owner)
-                textState = TextFieldValue("") // 돌아왔을 때 초기화
+        // 최근검색 리스트
+        RecentSearchResult(
+            recentSearches,
+            onDelete = { searchItem -> viewModel.removeRecentSearch(searchItem) },
+            onSearchItemClick = { searchItem ->
+                val intent = Intent(context, StationActivity::class.java).apply {
+                    putExtra("station_name", searchItem.stationName)
+                    putExtra("line", searchItem.lineNumber)
+                }
+                context.startActivity(intent)
+                viewModel.saveRecentSearch(searchItem)
             }
-        })
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFF5F5F5) // 화면 배경 색상 설정
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // 타이틀 바
-            TitleBar()
-
-            // 검색바
-            SearchTextBar(focusRequester = focusRequester, textState = textState, onTextChange = { textState = it })
-
-            // 최근검색 리스트
-            RecentSearchResult()
-        }
+        )
     }
 }
 
 @Composable
-fun SearchTextBar(focusRequester: FocusRequester, textState: TextFieldValue, onTextChange: (TextFieldValue) -> Unit) {
+fun SearchTextBar(
+    viewModel: SearchViewModel,
+    textState: TextFieldValue,
+    onTextChange: (TextFieldValue) -> Unit,
+    filteredStations: List<StationInfo>,
+    focusRequester: FocusRequester,
+    keyboardController: SoftwareKeyboardController?,
+) {
     val context = LocalContext.current
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    // 입력된 텍스트로 필터링된 지하철역 리스트
-    val filteredStations = allStationsWithLine.filter {
-        it.stationName.contains(textState.text, ignoreCase = true)
-    }
 
     Row(
         modifier = Modifier
@@ -202,24 +185,18 @@ fun SearchTextBar(focusRequester: FocusRequester, textState: TextFieldValue, onT
             ) {
                 BasicTextField(
                     value = textState, // 현재 상태를 value로 전달
-                    onValueChange = onTextChange,
+                    onValueChange = { newText ->
+                        onTextChange(newText)
+                        viewModel.filterStations(newText.text)
+                    },
                     modifier = Modifier
                         .padding(horizontal = 24.dp, vertical = 16.dp)
-                        .focusRequester(focusRequester), // FocusRequester 적용
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            // 키보드 내리기 (옵션)
-                            keyboardController?.hide()
-                        }
-                    ),
+                        .focusRequester(focusRequester), // FocusRequester 적용,
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
                     textStyle = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF868686)),
                     decorationBox = { innerTextField ->
-                        Box(
-                            modifier = Modifier.weight(1f)
-                        ) {
+                        Box(modifier = Modifier.weight(1f)) {
                             if (textState.text.isEmpty()) {
                                 Text(
                                     text = "지하철 역 이름 검색",
@@ -252,19 +229,12 @@ fun SearchTextBar(focusRequester: FocusRequester, textState: TextFieldValue, onT
                 SearchItemRow(
                     searchItem = searchItem,
                     onClick = {
-                        // 아이템 클릭 시 StationActivity로 이동
                         val intent = Intent(context, StationActivity::class.java).apply {
                             putExtra("station_name", searchItem.stationName)
                             putExtra("line", searchItem.lineNumber)
                         }
-                        // 최근 검색에 추가
-                        val recentSearchItem = RecentSearchItem(
-                            stationName = searchItem.stationName,
-                            line = searchItem.lineNumber,
-                            date = getCurrentDate()
-                        )
-                        saveRecentSearch(recentSearchItem, context) // 최근 검색 저장 함수 호출
                         context.startActivity(intent)
+                        viewModel.saveRecentSearch(RecentSearchItem(searchItem.stationName, searchItem.lineNumber, getCurrentDate()))
                     }
                 )
             }
@@ -273,7 +243,7 @@ fun SearchTextBar(focusRequester: FocusRequester, textState: TextFieldValue, onT
 }
 
 @Composable
-fun SearchItemRow(searchItem: StationInfoDTO, onClick: () -> Unit) {
+fun SearchItemRow(searchItem: StationInfo, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -303,54 +273,8 @@ fun SearchItemRow(searchItem: StationInfoDTO, onClick: () -> Unit) {
     }
 }
 
-fun getCurrentDate(): String {
-    val currentDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-    return currentDate.format(java.util.Date())
-}
-
-fun saveRecentSearch(newSearchItem: RecentSearchItem, context: Context) {
-    val sharedPreferences = context.getSharedPreferences("RecentSearchPrefs", Context.MODE_PRIVATE)
-    val editor = sharedPreferences.edit()
-    val gson = Gson()
-
-    // 저장된 최근 검색 목록 가져오기
-    val recentSearchJson = sharedPreferences.getString("recentSearchList", "[]")
-    val recentSearchListType = object : TypeToken<MutableList<RecentSearchItem>>() {}.type
-    val recentSearchList: MutableList<RecentSearchItem> = gson.fromJson(recentSearchJson, recentSearchListType)
-
-    // 기존 리스트에서 중복된 항목 제거 (중복 방지)
-    recentSearchList.removeAll { it.stationName == newSearchItem.stationName && it.line == newSearchItem.line }
-
-    // 새로운 검색 기록을 리스트의 가장 앞에 추가
-    recentSearchList.add(0, newSearchItem)
-
-    // 리스트를 다시 저장
-    val updatedJson = gson.toJson(recentSearchList)
-    editor.putString("recentSearchList", updatedJson)
-    editor.apply()
-}
-
-
 @Composable
-fun RecentSearchResult() {
-    val context = LocalContext.current
-    val recentSearches = remember { mutableStateListOf<RecentSearchItem>() }
-
-    fun refreshRecentSearches() {
-        recentSearches.clear()
-        recentSearches.addAll(loadRecentSearches(context))
-    }
-
-    val lifecycleOwner = rememberUpdatedState(LocalContext.current as androidx.lifecycle.LifecycleOwner)
-    LaunchedEffect(lifecycleOwner.value.lifecycle) {
-        lifecycleOwner.value.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onResume(owner: androidx.lifecycle.LifecycleOwner) {
-                super.onResume(owner)
-                refreshRecentSearches()
-            }
-        })
-    }
-
+fun RecentSearchResult(recentSearches: List<RecentSearchItem>, onDelete: (RecentSearchItem) -> Unit, onSearchItemClick: (RecentSearchItem) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -370,50 +294,15 @@ fun RecentSearchResult() {
             items(recentSearches) { searchItem ->
                 RecentSearchItemRow(
                     recentSearchItem = searchItem,
-                    onDelete = {
-                        recentSearches.remove(searchItem)
-                        saveRecentSearchList(recentSearches, context)
-                    },
-                    onClick = {
-                        // StationActivity로 이동
-                        val intent = Intent(context, StationActivity::class.java).apply {
-                            putExtra("station_name", searchItem.stationName)
-                            putExtra("line", searchItem.line)
-                        }
-                        // 최근 검색에 추가
-                        val recentSearchItem = RecentSearchItem(
-                            stationName = searchItem.stationName,
-                            line = searchItem.line,
-                            date = getCurrentDate()
-                        )
-                        saveRecentSearch(recentSearchItem, context) // 최근 검색 저장 함수 호출
-                        context.startActivity(intent)
-                    }
+                    onDelete = { onDelete(searchItem) },
+                    onClick = { onSearchItemClick(searchItem) }
                 )
             }
         }
     }
 }
 
-fun loadRecentSearches(context: Context): List<RecentSearchItem> {
-    val sharedPreferences = context.getSharedPreferences("RecentSearchPrefs", Context.MODE_PRIVATE)
-    val gson = Gson()
-    val recentSearchJson = sharedPreferences.getString("recentSearchList", "[]")
-    val recentSearchListType = object : TypeToken<List<RecentSearchItem>>() {}.type
-    val recentSearchList: List<RecentSearchItem> = gson.fromJson(recentSearchJson, recentSearchListType)
 
-    // 최근 검색 기록을 최신순으로 반환
-    return recentSearchList
-}
-
-fun saveRecentSearchList(updatedList: List<RecentSearchItem>, context: Context) {
-    val sharedPreferences = context.getSharedPreferences("RecentSearchPrefs", Context.MODE_PRIVATE)
-    val editor = sharedPreferences.edit()
-    val gson = Gson()
-    val updatedJson = gson.toJson(updatedList)
-    editor.putString("recentSearchList", updatedJson)
-    editor.apply()
-}
 
 @Composable
 fun RecentSearchItemRow(recentSearchItem: RecentSearchItem, onDelete: () -> Unit, onClick: () -> Unit) {
@@ -437,9 +326,11 @@ fun RecentSearchItemRow(recentSearchItem: RecentSearchItem, onDelete: () -> Unit
                 text = recentSearchItem.stationName,
                 style = TextStyle(color = Color(0xFF868686), fontSize = 14.sp, fontWeight = FontWeight.Medium)
             )
+
             Spacer(Modifier.width(4.dp))
+
             Text(
-                text = recentSearchItem.line,
+                text = recentSearchItem.lineNumber,
                 style = TextStyle(color = Color(0xFF868686), fontSize = 14.sp, fontWeight = FontWeight.Medium)
             )
         }
@@ -468,10 +359,8 @@ fun RecentSearchItemRow(recentSearchItem: RecentSearchItem, onDelete: () -> Unit
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun SearchPreview() {
-    Egegot_mkTheme {
-        SearchScreen(focusRequester = remember { FocusRequester() })
-    }
+fun getCurrentDate(): String {
+    val currentDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+    return currentDate.format(java.util.Date())
 }
+

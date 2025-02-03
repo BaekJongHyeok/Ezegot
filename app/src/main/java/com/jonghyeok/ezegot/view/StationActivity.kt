@@ -1,5 +1,7 @@
-package com.jonghyeok.ezegot
+package com.jonghyeok.ezegot.view
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,7 +27,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -45,33 +47,39 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jonghyeok.ezegot.R
+import com.jonghyeok.ezegot.SharedPreferenceManager
+import com.jonghyeok.ezegot.repository.StationRepository
+import com.jonghyeok.ezegot.viewModel.StationViewModel
+import com.jonghyeok.ezegot.SubwayLine
+import com.jonghyeok.ezegot.api.RetrofitInstance
+import com.jonghyeok.ezegot.dto.BasicStationInfo
+import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.modelFactory.StationViewModelFactory
 import com.jonghyeok.ezegot.ui.theme.App_Background_Color
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
 
 class StationActivity : ComponentActivity() {
+    private val viewModel: StationViewModel by viewModels {
+        StationViewModelFactory(StationRepository(RetrofitInstance.api2, SharedPreferenceManager(this)))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val stationName = intent.getStringExtra("station_name") ?: "역 정보 없음"
         val line = intent.getStringExtra("line") ?: "선 정보 없음"
 
-        val viewModel: StationViewModel by viewModels()
-
-        // API 호출을 Activity에서 한 번만 수행
-        viewModel.fetchStationArrivalInfo(stationName)
-        viewModel.checkIfStationIsSaved(stationName)
+        viewModel.fetchStationInfo(stationName, line)
+        viewModel.fetchRealtimeArrival(stationName)
 
         setContent {
             Egegot_mkTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { paddingValues ->
-                    StationContent(
-                        modifier = Modifier.padding(paddingValues),
-                        stationName = stationName,
-                        line = line,
-                        viewModel = viewModel
-                    )
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = App_Background_Color
+                ) {
+                    StationScreen(viewModel)
                 }
             }
         }
@@ -79,68 +87,45 @@ class StationActivity : ComponentActivity() {
 }
 
 @Composable
-fun StationContent(modifier: Modifier = Modifier, stationName: String, line: String, viewModel: StationViewModel) {
-    val stationArrivalInfo by viewModel.stationArrivalInfo.collectAsState()
-    val isSaved by viewModel.isSaved.collectAsState()
+fun StationScreen(viewModel: StationViewModel) {
+    val stationInfo: BasicStationInfo? by viewModel.stationInfo.collectAsState()
+    val arrivalInfo: List<RealtimeArrival> by viewModel.arrivalInfo.collectAsState()
+    val isSaved: Boolean by viewModel.isSaved.collectAsState()
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(App_Background_Color),
-        verticalArrangement = Arrangement.Top,
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        StationScreen(
-            stationName = stationName,
-            line = line,
-            stationArrivalInfo = stationArrivalInfo,
-            isSaved = isSaved,
-            onFavoriteClick = { viewModel.toggleStationFavorite(stationName) }
-        )
+        StationTitleBar(stationInfo)          // 타이틀 바
+
+        Spacer(Modifier.height(20.dp))
+
+        ButtonBar(isSaved) { viewModel.toggleFavorite() }         // 버튼 바
+
+        Spacer(Modifier.height(20.dp))
+
+        stationInfo?.let { ArrivalCardRow(arrivalInfo, it.lineNumber) }    // 도착 정보
+
+        Spacer(Modifier.height(20.dp))
+
+        RouteMapBar()                               // 노선도
+
+        Spacer(Modifier.height(20.dp))
+
+        EnterInfoBar()                              // 출입구 정보
+
+        Spacer(Modifier.height(20.dp))
+
+        StationInfoBar()                            // 지하철 역 정보
+
+        Spacer(Modifier.height(20.dp))
     }
 }
 
 @Composable
-fun StationScreen(stationName: String, line: String, stationArrivalInfo: List<Arrival>, isSaved: Boolean, onFavoriteClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = App_Background_Color // 화면 배경 색상 설정
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            StationTitleBar(stationName, line)
-
-            Spacer(Modifier.height(20.dp))
-
-            ButtonBar(isSaved, onFavoriteClick)
-
-            Spacer(Modifier.height(20.dp))
-
-            ArrivalCardRow(stationArrivalInfo, line)
-
-            Spacer(Modifier.height(20.dp))
-
-            RouteMapBar()
-
-            Spacer(Modifier.height(20.dp))
-
-            EnterInfoBar()
-
-            Spacer(Modifier.height(20.dp))
-
-            StationInfoBar()
-
-            Spacer(Modifier.height(20.dp))
-        }
-    }
-}
-
-@Composable
-fun StationTitleBar(stationName: String, line: String) {
+fun StationTitleBar(stationInfo: BasicStationInfo?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -150,13 +135,15 @@ fun StationTitleBar(stationName: String, line: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = stationName,
+            text = stationInfo?.stationName ?: "역 정보 없음",
             fontSize = 24.sp,
             fontWeight = FontWeight.Black,
         )
+
         Spacer(Modifier.width(12.dp))
+
         Text(
-            text = line,
+            text = stationInfo?.lineNumber ?: "노선 정보 없음",
             style = TextStyle(color = Color(0xFF868686), fontSize = 24.sp, fontWeight = FontWeight.Medium)
         )
     }
@@ -265,24 +252,7 @@ fun ButtonBar(isSaved: Boolean, onFavoriteClick: () -> Unit) {
             color = Color(0xFFF1F1F1) // 구분선 색상
         )
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                modifier = Modifier.size(20.dp),
-                painter = painterResource(id = R.drawable.ic_call),
-                contentDescription = "Call Icon",
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "전화",
-                fontSize = 16.sp,
-                color = Color(0xFF2F2F2F),
-                fontWeight = FontWeight.SemiBold
-            )
-        }
+        CallButton()
 
         // 구분선 추가
         Divider(
@@ -292,35 +262,81 @@ fun ButtonBar(isSaved: Boolean, onFavoriteClick: () -> Unit) {
             color = Color(0xFFF1F1F1) // 구분선 색상
         )
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                modifier = Modifier.size(20.dp),
-                painter = painterResource(id = R.drawable.ic_share),
-                contentDescription = "Share Icon",
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "공유",
-                fontSize = 16.sp,
-                color = Color(0xFF2F2F2F),
-                fontWeight = FontWeight.SemiBold
-            )
-        }
+        ShareButton()
     }
 }
 
 @Composable
-fun ArrivalCardRow(stationArrivalInfo: List<Arrival>, line: String) {
+fun CallButton() {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .clickable {
+                val intent = Intent(Intent.ACTION_DIAL).apply {
+                    data = Uri.parse("tel:15447788")
+                }
+                context.startActivity(intent)
+            },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            modifier = Modifier.size(20.dp),
+            painter = painterResource(id = R.drawable.ic_call),
+            contentDescription = "Call Icon",
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "전화",
+            fontSize = 16.sp,
+            color = Color(0xFF2F2F2F),
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+fun ShareButton() {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .clickable {
+                val shareText = "이 앱을 확인해보세요! 🚀\nhttps://play.google.com/store/apps/details?id=com.example.app"
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"  // 공유할 내용의 타입
+                    putExtra(Intent.EXTRA_TEXT, shareText) // 공유할 텍스트
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(Intent.createChooser(intent, "공유하기"))
+            },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            modifier = Modifier.size(20.dp),
+            painter = painterResource(id = R.drawable.ic_share),
+            contentDescription = "Share Icon",
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "공유",
+            fontSize = 16.sp,
+            color = Color(0xFF2F2F2F),
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+fun ArrivalCardRow(stationArrivalInfo: List<RealtimeArrival>, line: String) {
     val lineId = SubwayLine.getLineId(line)
 
     var upDt = "";
     var dnDt = "";
-    val upArrivalInfo = mutableListOf<Arrival>()
-    val downArrivalInfo = mutableListOf<Arrival>()
+    val upArrivalInfo = mutableListOf<RealtimeArrival>()
+    val downArrivalInfo = mutableListOf<RealtimeArrival>()
 
     stationArrivalInfo.forEach { arrival ->
         if (arrival.subwayId != lineId) {
@@ -358,7 +374,7 @@ fun ArrivalCardRow(stationArrivalInfo: List<Arrival>, line: String) {
 }
 
 @Composable
-fun ArrivalCard(cardWidth: Dp, arrivals: List<Arrival>, dt: String) {
+fun ArrivalCard(cardWidth: Dp, arrivals: List<RealtimeArrival>, dt: String) {
     Card(
         modifier = Modifier
             .width(cardWidth)

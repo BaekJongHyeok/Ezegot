@@ -3,19 +3,19 @@ package com.jonghyeok.ezegot
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jonghyeok.ezegot.api.RetrofitInstance
+import com.jonghyeok.ezegot.dto.BasicStationInfo
+import com.jonghyeok.ezegot.dto.RealtimeArrival
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class StationViewModel: ViewModel() {
+class MainViewModel: ViewModel() {
     private val stationPreferences: SharedPreferenceManager = SharedPreferenceManager(App.context)
 
-    private val _stationArrivalInfo = MutableStateFlow<List<Arrival>>(emptyList())
-    val stationArrivalInfo: StateFlow<List<Arrival>> = _stationArrivalInfo.asStateFlow()
+    private val _stationArrivalInfo = MutableStateFlow<List<RealtimeArrival>>(emptyList())
+    val stationArrivalInfo: StateFlow<List<RealtimeArrival>> = _stationArrivalInfo.asStateFlow()
 
-    private val _isSaved = MutableStateFlow(false)
-    val isSaved = _isSaved.asStateFlow()
 
     fun fetchStationArrivalInfo(stationName: String) {
         viewModelScope.launch {
@@ -28,16 +28,12 @@ class StationViewModel: ViewModel() {
         }
     }
 
-    fun checkIfStationIsSaved(stationName: String) {
-        _isSaved.value = stationPreferences.isStationSaved(stationName)
+    fun getFavoriteStations(): List<BasicStationInfo> {
+        return stationPreferences.getSavedStations().toList()
     }
 
-    fun toggleStationFavorite(stationName: String) {
-        if (_isSaved.value) {
-            stationPreferences.removeStation(stationName)
-        } else {
-            stationPreferences.saveStation(stationName)
-        }
-        _isSaved.value = !_isSaved.value
-    }
+    private val _stationNames = MutableStateFlow(
+        listOf("수원", "가산디지털단지", "매탄권선", "수원시청")
+    )
+    val stationNames: StateFlow<List<String>> = _stationNames
 }

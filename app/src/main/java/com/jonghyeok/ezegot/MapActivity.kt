@@ -38,6 +38,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
+import com.jonghyeok.ezegot.view.SearchActivity
 
 class MapActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
