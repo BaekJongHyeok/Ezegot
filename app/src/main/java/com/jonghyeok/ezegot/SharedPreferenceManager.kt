@@ -36,23 +36,28 @@ class SharedPreferenceManager(context: Context) {
     // 즐겨찾기
     // =============================================================================================
     /// 즐겨찾기 목록 불러오기
-    fun getSavedStations(): Set<BasicStationInfo> {
-        val jsonString = prefs.getString("saved_stations", "[]") // 기본값: 빈 배열 JSON
-        val type = object : TypeToken<Set<StationInfo>>() {}.type
-        return gson.fromJson(jsonString, type) ?: emptySet()
+    fun getSavedStations(): List<BasicStationInfo> {
+        val jsonString = prefs.getString("saved_stations", "")
+        if (jsonString != "") {
+            val type = object : TypeToken<List<BasicStationInfo>>() {}.type
+            return gson.fromJson(jsonString, type)
+        }
+       return emptyList();
     }
 
     /// 즐겨찾기 추가
     fun saveStation(stationInfo: BasicStationInfo) {
-        val stations = getSavedStations().toMutableSet()
-        stations.add(stationInfo)
-        val jsonString = gson.toJson(stations)
+        val stations = getSavedStations().toMutableList() // List로 변경
+        if (!stations.contains(stationInfo)) { // 중복 방지
+            stations.add(stationInfo)
+        }
+        val jsonString = gson.toJson(stations) // JSON 문자열로 변환
         prefs.edit().putString("saved_stations", jsonString).apply()
     }
 
     /// 즐겨찾기 삭제
     fun removeStation(stationInfo: BasicStationInfo) {
-        val stations = getSavedStations().toMutableSet()
+        val stations = getSavedStations().toMutableList()
         stations.remove(stationInfo)
         val jsonString = gson.toJson(stations)
         prefs.edit().putString("saved_stations", jsonString).apply()
@@ -75,7 +80,7 @@ class SharedPreferenceManager(context: Context) {
 
     /// 최근 검색 역 목록 저장
     fun saveRecentSearchList(updatedList: List<RecentSearchItem>) {
-        val updatedJson = gson.toJson(updatedList)
+        val updatedJson = gson.toJson(updatedList.take(20)) // 최대 20개까지만 유지
         prefs.edit().putString("recentSearchList", updatedJson).apply()
     }
 }

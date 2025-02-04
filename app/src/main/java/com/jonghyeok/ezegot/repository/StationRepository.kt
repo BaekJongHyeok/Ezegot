@@ -25,15 +25,15 @@ class StationRepository(
         }
     }
 
-    fun isStationSaved(stationName: BasicStationInfo): Boolean {
-        return pm.isStationSaved(stationName)
+    fun isStationSaved(stationInfo: BasicStationInfo): Boolean {
+        return pm.isStationSaved(stationInfo)
     }
 
-    fun removeStation(station: BasicStationInfo) {
-        pm.removeStation(station)
+    fun removeStation(stationInfo: BasicStationInfo) {
+        pm.removeStation(stationInfo)
     }
 
-    fun saveStation(station: BasicStationInfo) {
-        pm.saveStation(station)
+    fun saveStation(stationInfo: BasicStationInfo) {
+        pm.saveStation(stationInfo)
     }
 }

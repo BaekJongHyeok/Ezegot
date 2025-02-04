@@ -25,9 +25,11 @@ class StationViewModel(private val repository: StationRepository) : ViewModel() 
      * 역 기초 정보 설정
      */
     fun fetchStationInfo(stationName: String, line: String) {
-        _stationInfo.value = BasicStationInfo(stationName, line)
-        _isSaved.value = repository.isStationSaved(_stationInfo.value!!)
+        val stationInfo = BasicStationInfo(stationName, line)
+        _stationInfo.value = stationInfo
+        _isSaved.value = repository.isStationSaved(stationInfo) // !! 제거
     }
+
 
     /**
      * 실시간 도착 정보 조회

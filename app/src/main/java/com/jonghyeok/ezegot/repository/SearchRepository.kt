@@ -12,8 +12,8 @@ class SearchRepository(
         return pm.getStationList()
     }
 
-    fun saveRecentSearchList(recentSearchList: List<RecentSearchItem>) {
-        pm.saveRecentSearchList(recentSearchList)
+    fun saveRecentSearchList(station: List<RecentSearchItem>) {
+        pm.saveRecentSearchList(station)
     }
 
     fun removeRecentSearchList(recentSearchList: List<RecentSearchItem>) {

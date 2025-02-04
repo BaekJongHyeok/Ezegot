@@ -106,7 +106,7 @@ fun SearchScreen(viewModel: SearchViewModel) {
     LaunchedEffect(Unit) {
         focusRequester.requestFocus() // 포커스를 자동으로 요청
         keyboardController?.show()  // 키보드를 표시
-        viewModel.loadRecentSearches()
+        textState = TextFieldValue("")
     }
 
     Column(
