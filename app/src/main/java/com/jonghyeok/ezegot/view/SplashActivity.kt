@@ -12,7 +12,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.jonghyeok.ezegot.MainActivity
 import com.jonghyeok.ezegot.SharedPreferenceManager
 import com.jonghyeok.ezegot.modelFactory.SplashViewModelFactory
 import com.jonghyeok.ezegot.repository.SplashRepository

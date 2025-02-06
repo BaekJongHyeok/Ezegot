@@ -6,34 +6,29 @@ import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.IOException
 
-class StationRepository(
+class MainRepository(
     private val apiService: SubwayApiService,
-    private val pm: SharedPreferenceManager
+    private val pm : SharedPreferenceManager
 ) {
+
+    // 즐겨찾기 저장된 역 정보
+    fun getFavoriteStations(): List<BasicStationInfo> {
+        return pm.getFavoriteStations()
+    }
+
+    // 실시간 도착 정보 불러 오기
     suspend fun getRealtimeArrivalInfo(stationName: String): List<RealtimeArrival> {
         return try {
             val response = withContext(Dispatchers.IO) { apiService.getStationArrivalInfo(stationName) }
             response.arrivals
-        } catch (e: IOException) {
-            e.printStackTrace()
-            emptyList()
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
         }
     }
 
-    fun isStationSaved(stationInfo: BasicStationInfo): Boolean {
-        return pm.isFavoriteStation(stationInfo)
-    }
-
-    fun removeStation(stationInfo: BasicStationInfo) {
-        pm.removeFavoriteStation(stationInfo)
-    }
-
-    fun saveStation(stationInfo: BasicStationInfo) {
-        pm.addFavoriteStation(stationInfo)
+    fun getNearbyStations(latitude: Double, longitude: Double): List<BasicStationInfo> {
+        return emptyList()
     }
 }

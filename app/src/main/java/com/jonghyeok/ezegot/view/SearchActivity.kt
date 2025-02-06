@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.sp
 import com.jonghyeok.ezegot.R
 import com.jonghyeok.ezegot.RecentSearchItem
 import com.jonghyeok.ezegot.SharedPreferenceManager
-import com.jonghyeok.ezegot.TitleBar
 import com.jonghyeok.ezegot.dto.StationInfo
 import com.jonghyeok.ezegot.modelFactory.SearchViewModelFactory
 import com.jonghyeok.ezegot.repository.SearchRepository

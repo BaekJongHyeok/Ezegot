@@ -36,36 +36,33 @@ class SharedPreferenceManager(context: Context) {
     // 즐겨찾기
     // =============================================================================================
     /// 즐겨찾기 목록 불러오기
-    fun getSavedStations(): List<BasicStationInfo> {
-        val jsonString = prefs.getString("saved_stations", "")
-        if (jsonString != "") {
-            val type = object : TypeToken<List<BasicStationInfo>>() {}.type
-            return gson.fromJson(jsonString, type)
-        }
-       return emptyList();
+    fun getFavoriteStations(): List<BasicStationInfo> {
+        val jsonString = prefs.getString("favoriteStations", "[]")
+        val type = object : TypeToken<List<BasicStationInfo>>() {}.type
+        return gson.fromJson(jsonString, type)
     }
 
     /// 즐겨찾기 추가
-    fun saveStation(stationInfo: BasicStationInfo) {
-        val stations = getSavedStations().toMutableList() // List로 변경
+    fun addFavoriteStation(stationInfo: BasicStationInfo) {
+        val stations = getFavoriteStations().toMutableList() // List로 변경
         if (!stations.contains(stationInfo)) { // 중복 방지
             stations.add(stationInfo)
         }
         val jsonString = gson.toJson(stations) // JSON 문자열로 변환
-        prefs.edit().putString("saved_stations", jsonString).apply()
+        prefs.edit().putString("favoriteStations", jsonString).apply()
     }
 
     /// 즐겨찾기 삭제
-    fun removeStation(stationInfo: BasicStationInfo) {
-        val stations = getSavedStations().toMutableList()
+    fun removeFavoriteStation(stationInfo: BasicStationInfo) {
+        val stations = getFavoriteStations().toMutableList()
         stations.remove(stationInfo)
         val jsonString = gson.toJson(stations)
-        prefs.edit().putString("saved_stations", jsonString).apply()
+        prefs.edit().putString("favoriteStations", jsonString).apply()
     }
 
     /// 특정 역이 즐겨찾기 되어 있는지 확인
-    fun isStationSaved(stationInfo: BasicStationInfo): Boolean {
-        return getSavedStations().contains(stationInfo)
+    fun isFavoriteStation(stationInfo: BasicStationInfo): Boolean {
+        return getFavoriteStations().contains(stationInfo)
     }
 
     // =============================================================================================
