@@ -1,6 +1,7 @@
 package com.jonghyeok.ezegot.view
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,7 +11,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -90,7 +90,8 @@ class StationActivity : ComponentActivity() {
 fun StationScreen(viewModel: StationViewModel) {
     val stationInfo: BasicStationInfo? by viewModel.stationInfo.collectAsState()
     val arrivalInfo: List<RealtimeArrival> by viewModel.arrivalInfo.collectAsState()
-    val isSaved: Boolean by viewModel.isSaved.collectAsState()
+    val isFavorite: Boolean by viewModel.isFavorite.collectAsState()
+    val isNotification: Boolean by viewModel.isNotification.collectAsState()
 
     Column(
         modifier = Modifier
@@ -98,11 +99,11 @@ fun StationScreen(viewModel: StationViewModel) {
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        StationTitleBar(stationInfo)          // 타이틀 바
+        StationTitleBar(stationInfo, arrivalInfo)          // 타이틀 바
 
         Spacer(Modifier.height(20.dp))
 
-        ButtonBar(isSaved) { viewModel.toggleFavorite() }         // 버튼 바
+        ButtonBar(isFavorite, { viewModel.toggleFavorite() }, isNotification, { viewModel.toggleNotification() }, stationInfo)       // 버튼 바
 
         Spacer(Modifier.height(20.dp))
 
@@ -125,7 +126,7 @@ fun StationScreen(viewModel: StationViewModel) {
 }
 
 @Composable
-fun StationTitleBar(stationInfo: BasicStationInfo?) {
+fun StationTitleBar(stationInfo: BasicStationInfo?, subwayList: List<RealtimeArrival>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -136,19 +137,22 @@ fun StationTitleBar(stationInfo: BasicStationInfo?) {
     ) {
         Text(
             text = stationInfo?.stationName ?: "역 정보 없음",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Black,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.SemiBold,
         )
 
         Spacer(Modifier.width(12.dp))
 
         Text(
             text = stationInfo?.lineNumber ?: "노선 정보 없음",
-            style = TextStyle(color = Color(0xFF868686), fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            style = TextStyle(
+                color = Color(0xFF868686),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.SemiBold)
         )
     }
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(10.dp))
 
     Row(
         modifier = Modifier
@@ -166,16 +170,27 @@ fun StationTitleBar(stationInfo: BasicStationInfo?) {
 
         Spacer(Modifier.width(12.dp))
 
-        Image(
-            modifier = Modifier.size(20.dp), // 이미지 크기 설정
-            bitmap = ImageBitmap.imageResource(R.drawable.ic_line1),
-            contentDescription = "Station Image",
-        )
+        if (subwayList.isEmpty()) return
+        for (line in subwayList[0].subwayList.split(",")) {
+            Image(
+                modifier = Modifier.size(20.dp), // 이미지 크기 설정
+                bitmap = ImageBitmap.imageResource(SubwayLine.getLineImageById(line)),
+                contentDescription = "Station Image",
+            )
+
+            Spacer(Modifier.width(8.dp))
+        }
     }
 }
 
 @Composable
-fun ButtonBar(isSaved: Boolean, onFavoriteClick: () -> Unit) {
+fun ButtonBar(
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit,
+    isNotification: Boolean,
+    onNotificationClick: () -> Unit,
+    stationInfo: BasicStationInfo?
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -201,9 +216,7 @@ fun ButtonBar(isSaved: Boolean, onFavoriteClick: () -> Unit) {
         ) {
             Image(
                 modifier = Modifier.size(20.dp),
-                painter = painterResource(
-                    id = if (isSaved) R.drawable.ic_favorite_on else R.drawable.ic_favorite_off
-                ),
+                painter = painterResource(id = if (isFavorite) R.drawable.ic_favorite_on else R.drawable.ic_favorite_off),
                 contentDescription = "Favorite Icon",
             )
 
@@ -219,6 +232,7 @@ fun ButtonBar(isSaved: Boolean, onFavoriteClick: () -> Unit) {
 
         // 구분선 추가
         Divider(
+
             modifier = Modifier
                 .width(1.dp)
                 .height(24.dp), // 구분선 두께
@@ -226,11 +240,12 @@ fun ButtonBar(isSaved: Boolean, onFavoriteClick: () -> Unit) {
         )
 
         Column(
+            modifier = Modifier.clickable { onNotificationClick() },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 modifier = Modifier.size(20.dp),
-                painter = painterResource(id = R.drawable.ic_notification_off),
+                painter = painterResource(id = if (isNotification) R.drawable.ic_notification_on else R.drawable.ic_notification_off),
                 contentDescription = "Notification Off Icon",
             )
 
@@ -262,7 +277,7 @@ fun ButtonBar(isSaved: Boolean, onFavoriteClick: () -> Unit) {
             color = Color(0xFFF1F1F1) // 구분선 색상
         )
 
-        ShareButton()
+        ShareButton(stationInfo)
     }
 }
 
@@ -297,18 +312,19 @@ fun CallButton() {
 }
 
 @Composable
-fun ShareButton() {
+fun ShareButton(stationInfo: BasicStationInfo?) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
             .clickable {
-                val shareText = "이 앱을 확인해보세요! 🚀\nhttps://play.google.com/store/apps/details?id=com.example.app"
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"  // 공유할 내용의 타입
-                    putExtra(Intent.EXTRA_TEXT, shareText) // 공유할 텍스트
+                val shareText = "${stationInfo?.stationName} ${stationInfo?.lineNumber}"
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, shareText) // 공유할 텍스트와 링크
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                context.startActivity(Intent.createChooser(intent, "공유하기"))
+
+                context.startActivity(Intent.createChooser(shareIntent, "공유하기"))
             },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -333,97 +349,88 @@ fun ShareButton() {
 fun ArrivalCardRow(stationArrivalInfo: List<RealtimeArrival>, line: String) {
     val lineId = SubwayLine.getLineId(line)
 
-    var upDt = "";
-    var dnDt = "";
-    val upArrivalInfo = mutableListOf<RealtimeArrival>()
-    val downArrivalInfo = mutableListOf<RealtimeArrival>()
+    // 상행 / 하행 데이터 필터링
+    val upArrivalInfo = stationArrivalInfo.filter { it.subwayId == lineId && it.updnLine == "상행" }
+    val downArrivalInfo = stationArrivalInfo.filter { it.subwayId == lineId && it.updnLine != "상행" }
 
-    stationArrivalInfo.forEach { arrival ->
-        if (arrival.subwayId != lineId) {
-            return@forEach
-        }
+    val upDt = upArrivalInfo.firstOrNull()?.bstatnNm ?: ""
+    val dnDt = downArrivalInfo.firstOrNull()?.bstatnNm ?: ""
 
-        if (arrival.updnLine == "상행") {
-            upArrivalInfo.add(arrival)
-            upDt = arrival.bstatnNm
-        } else {
-            downArrivalInfo.add(arrival)
-            dnDt = arrival.bstatnNm
-        }
-    }
+    val itemCnt = maxOf(upArrivalInfo.size, downArrivalInfo.size)
 
-    BoxWithConstraints(
-        modifier = Modifier.fillMaxWidth(),
+    val totalSpacing = 44.dp // 전체 여백
+    val titleSize = 18.dp // 타이틀 사이즈
+    val textSpacing = 12.dp // 텍스트와 아이템 사이의 여백
+    val itemSize = 28.dp // 아이템 사이즈
+
+    // 아이템 수에 맞는 높이 계산 (아이템의 수에 따라 텍스트 크기와 여백을 고려)
+    val dynamicHeight = totalSpacing + titleSize + textSpacing + itemSize * itemCnt
+
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        val availableWidth = maxWidth - 40.dp
-        val cardWidth = (availableWidth - 12.dp) / 2 // 공백을 고려하여 두 개 배치
+        ArrivalCard(
+            modifier = Modifier.weight(1f),
+            cardHeight = dynamicHeight,
+            arrivals = upArrivalInfo,
+            dt = upDt,
+        )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // 상행 카드에 두 개의 도착 정보 표시
-            ArrivalCard(cardWidth, upArrivalInfo, upDt)
-
-            // 하행 카드에 두 개의 도착 정보 표시
-            ArrivalCard(cardWidth, downArrivalInfo, dnDt)
-        }
+        ArrivalCard(
+            modifier = Modifier.weight(1f),
+            cardHeight = dynamicHeight,
+            arrivals = downArrivalInfo,
+            dt = dnDt,
+        )
     }
 }
 
 @Composable
-fun ArrivalCard(cardWidth: Dp, arrivals: List<RealtimeArrival>, dt: String) {
+fun ArrivalCard(
+    modifier: Modifier,
+    cardHeight: Dp,
+    arrivals: List<RealtimeArrival>,
+    dt: String
+) {
     Card(
-        modifier = Modifier
-            .width(cardWidth)
-            .height(206.dp),
+        modifier = modifier.height(cardHeight),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-                .padding(top = 20.dp, bottom = 24.dp),
+            modifier = Modifier.padding(start = 16.dp, top = 20.dp, end = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.Top
         ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = "$dt 방면",
-                fontSize = 18.sp,
-                color = Color(0xFF2F2F2F),
-                fontWeight = FontWeight.SemiBold
+                style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2F2F2F))
             )
 
             Spacer(Modifier.height(12.dp))
 
             // 각 Arrival 정보 렌더링
             arrivals.forEach { arrival ->
-                val trainLineName = arrival.trainLineName.takeWhile { it != '행' }
-                val arrivalMsg = arrival.arrivalMessage1.takeWhile { it != '(' }
-
                 Row (
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = trainLineName,
-                        fontSize = 14.sp,
-                        color = Color(0xFF868686),
-                        fontWeight = FontWeight.Medium
+                        text = arrival.trainLineName.substringBefore("행"),
+                        style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF868686))
                     )
 
                     Text(
-                        text = arrivalMsg,
-                        fontSize = 14.sp,
-                        color = Color(0xFFEE4C4C),
-                        fontWeight = FontWeight.Medium
+                        text = arrival.arrivalMessage1.substringBefore("("),
+                        style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFFEE4C4C))
                     )
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
             }
         }
     }

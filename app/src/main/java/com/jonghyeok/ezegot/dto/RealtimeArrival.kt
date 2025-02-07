@@ -22,11 +22,19 @@ data class RealtimeArrival(
     @field:Element(name = "ordkey", required = false)
     var ordkey: String = "",
 
-    // 열차도착예정시간
+    // 연계호선ID
+    @field:Element(name = "subwayList", required = false)
+    var subwayList: String = "",
+
+    // 열차 종류
+    @field:Element(name = "btrainSttus", required = false)
+    var btrainSttus: String = "",
+
+    // 종착 지하철 명
     @field:Element(name = "bstatnNm", required = false)
     var bstatnNm: String = "",
 
-    // 종착지하철역명
+    // 열차 도착 예정시간
     @field:Element(name = "barvlDt", required = false)
     var barvlDt: String = "",
 

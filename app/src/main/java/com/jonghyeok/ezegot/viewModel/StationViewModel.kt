@@ -18,43 +18,47 @@ class StationViewModel(private val repository: StationRepository) : ViewModel() 
     private val _arrivalInfo = MutableStateFlow<List<RealtimeArrival>>(emptyList())
     val arrivalInfo: StateFlow<List<RealtimeArrival>> = _arrivalInfo.asStateFlow()
 
-    private val _isSaved = MutableStateFlow(false)
-    val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
+    private val _isFavorite = MutableStateFlow(false)
+    val isFavorite: StateFlow<Boolean> = _isFavorite.asStateFlow()
 
-    /**
-     * 역 기초 정보 설정
-     */
+    private val _isNotification = MutableStateFlow(false)
+    val isNotification: StateFlow<Boolean> = _isNotification.asStateFlow()
+
+    // 역 기초 정보 설정
     fun fetchStationInfo(stationName: String, line: String) {
         val stationInfo = BasicStationInfo(stationName, line)
         _stationInfo.value = stationInfo
-        _isSaved.value = repository.isStationSaved(stationInfo) // !! 제거
+        _isFavorite.value = repository.isStationSaved(stationInfo)
+        _isNotification.value = repository.isNotification(stationInfo)
     }
 
-
-    /**
-     * 실시간 도착 정보 조회
-     */
+    // 실시간 도착 정보 조회
     fun fetchRealtimeArrival(stationName: String) {
         viewModelScope.launch {
             _arrivalInfo.value = repository.getRealtimeArrivalInfo(stationName)
         }
     }
 
-    /**
-     * 즐겨찾기 등록 여부 확인
-     */
-
-    /**
-     * 즐겨찾기 추가/삭제 토글
-     */
+    // 즐겨찾기 추가/삭제 토글
     fun toggleFavorite() {
         val station = _stationInfo.value ?: return
-        if (_isSaved.value) {
+        if (_isFavorite.value) {
             repository.removeStation(station)
         } else {
-            repository.saveStation(station)
+            repository.addStation(station)
         }
-        _isSaved.value = !_isSaved.value
+        _isFavorite.value = !_isFavorite.value
     }
 
+    // 알람 추가/ 삭제 토글
+    fun toggleNotification() {
+        val station = _stationInfo.value ?: return
+        if (_isNotification.value) {
+            repository.removeNotification(station)
+        } else {
+            repository.addNotification(station)
+        }
+        _isNotification.value = !_isNotification.value
+
+    }
 }

@@ -24,6 +24,28 @@ data class SubwayLine(val id: String, val name: String) {
             "1032" to "GTX-A"
         )
 
+        private val lineImages = mapOf(
+            "1001" to R.drawable.ic_line1,
+            "1002" to R.drawable.ic_line2,
+            "1003" to R.drawable.ic_line3,
+            "1004" to R.drawable.ic_line4,
+            "1005" to R.drawable.ic_line5,
+            "1006" to R.drawable.ic_line6,
+            "1007" to R.drawable.ic_line7,
+            "1008" to R.drawable.ic_line8,
+            "1009" to R.drawable.ic_line9,
+            "1061" to R.drawable.ic_line0,
+            "1063" to R.drawable.ic_line11,
+            "1065" to R.drawable.ic_line12,
+            "1067" to R.drawable.ic_line13,
+            "1075" to R.drawable.ic_line14,
+            "1077" to R.drawable.ic_line15,
+            "1092" to R.drawable.ic_line16,
+            "1093" to R.drawable.ic_line17,
+            "1081" to R.drawable.ic_line18,
+            "1032" to R.drawable.ic_line19
+        )
+
         fun getLineName(id: String): String? {
             return lines[id]
         }
@@ -31,6 +53,10 @@ data class SubwayLine(val id: String, val name: String) {
         fun getLineId(name: String): String? {
             val formattedName = name.removePrefix("0") // "01호선" -> "1호선"
             return lines.entries.find { it.value == formattedName }?.key
+        }
+
+        fun getLineImageById(id: String): Int {
+                return lineImages[id] ?: R.drawable.ic_line0
         }
 
         fun getLineImage(lineNumber: String): Int {

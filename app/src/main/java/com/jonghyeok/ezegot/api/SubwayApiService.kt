@@ -1,6 +1,5 @@
 package com.jonghyeok.ezegot.api
 
-import com.jonghyeok.ezegot.StationArrivalResponse
 import retrofit2.http.GET
 import retrofit2.http.Path
 

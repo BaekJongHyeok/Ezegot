@@ -1,6 +1,6 @@
 package com.jonghyeok.ezegot.repository
 
-import com.jonghyeok.ezegot.RecentSearchItem
+import com.jonghyeok.ezegot.dto.RecentSearchItem
 import com.jonghyeok.ezegot.SharedPreferenceManager
 import com.jonghyeok.ezegot.dto.StationInfo
 

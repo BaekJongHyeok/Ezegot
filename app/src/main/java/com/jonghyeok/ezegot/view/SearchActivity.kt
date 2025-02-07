@@ -1,14 +1,17 @@
 package com.jonghyeok.ezegot.view
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,9 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,7 +54,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jonghyeok.ezegot.R
-import com.jonghyeok.ezegot.RecentSearchItem
+import com.jonghyeok.ezegot.dto.RecentSearchItem
 import com.jonghyeok.ezegot.SharedPreferenceManager
 import com.jonghyeok.ezegot.dto.StationInfo
 import com.jonghyeok.ezegot.modelFactory.SearchViewModelFactory
@@ -81,6 +82,11 @@ class SearchActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.onTextChange(TextFieldValue(""))
+    }
+
     override fun onBackPressed() {
         super.onBackPressedDispatcher.onBackPressed()
         // 뒤로가기 애니메이션 설정
@@ -98,31 +104,32 @@ fun SearchScreen(viewModel: SearchViewModel) {
     val context = LocalContext.current
     val recentSearches: List<RecentSearchItem> by viewModel.recentSearches.collectAsState()
     val filteredStations by viewModel.filteredStations.collectAsState()
-    var textState by remember { mutableStateOf(TextFieldValue("")) }
+    val textState by viewModel.textState.collectAsState()
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus() // 포커스를 자동으로 요청
         keyboardController?.show()  // 키보드를 표시
-        textState = TextFieldValue("")
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // 타이틀 바
-        TitleBar()
+        SearchTitleBar()
 
         // 검색바
         SearchTextBar(viewModel,
             textState = textState,
-            onTextChange = { textState = it },
+            onTextChange = { viewModel.onTextChange(it) },
             filteredStations = filteredStations,
             focusRequester = focusRequester,
             keyboardController = keyboardController
         )
+
+        SearchList(viewModel, textState, filteredStations)
 
         // 최근검색 리스트
         RecentSearchResult(
@@ -141,6 +148,57 @@ fun SearchScreen(viewModel: SearchViewModel) {
 }
 
 @Composable
+fun SearchList(
+    viewModel: SearchViewModel,
+    textState: TextFieldValue,
+    filteredStations: List<StationInfo>
+) {
+    val context = LocalContext.current
+
+    // 입력된 텍스트가 없을 때는 리스트를 표시하지 않음
+    if (textState.text.isNotEmpty() && filteredStations.isNotEmpty()) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 10.dp)
+                .clickable {}
+        ) {
+            items(filteredStations) { searchItem ->
+                SearchItemRow(
+                    searchItem = searchItem,
+                    onClick = {
+                        val intent = Intent(context, StationActivity::class.java).apply {
+                            putExtra("station_name", searchItem.stationName)
+                            putExtra("line", searchItem.lineNumber)
+                        }
+                        context.startActivity(intent)
+                        viewModel.saveRecentSearch(RecentSearchItem(searchItem.stationName, searchItem.lineNumber, getCurrentDate()))
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchTitleBar() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(color = Color(0xFFF5F5F5))
+            .padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "EZEGOT",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
 fun SearchTextBar(
     viewModel: SearchViewModel,
     textState: TextFieldValue,
@@ -150,6 +208,7 @@ fun SearchTextBar(
     keyboardController: SoftwareKeyboardController?,
 ) {
     val context = LocalContext.current
+    val stationList by viewModel.stationList.collectAsState()
 
     Row(
         modifier = Modifier
@@ -192,7 +251,10 @@ fun SearchTextBar(
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                         .focusRequester(focusRequester), // FocusRequester 적용,
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
+                    keyboardActions = KeyboardActions(onDone = {
+                        keyboardController?.hide()
+                        searchStation(textState.text, stationList, context)
+                    }),
                     textStyle = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF868686)),
                     decorationBox = { innerTextField ->
                         Box(modifier = Modifier.weight(1f)) {
@@ -208,36 +270,28 @@ fun SearchTextBar(
                 )
 
                 Image(
-                    modifier = Modifier.padding(end = 20.dp),
+                    modifier = Modifier
+                        .padding(end = 20.dp)
+                        .clickable { searchStation(textState.text, stationList, context) },
                     painter = painterResource(id = R.drawable.ic_search),
                     contentDescription = "Search Icon",
                 )
             }
         }
     }
+}
 
-    // 입력된 텍스트가 없을 때는 리스트를 표시하지 않음
-    if (textState.text.isNotEmpty() && filteredStations.isNotEmpty()) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 10.dp)
-                .clickable {}
-        ) {
-            items(filteredStations) { searchItem ->
-                SearchItemRow(
-                    searchItem = searchItem,
-                    onClick = {
-                        val intent = Intent(context, StationActivity::class.java).apply {
-                            putExtra("station_name", searchItem.stationName)
-                            putExtra("line", searchItem.lineNumber)
-                        }
-                        context.startActivity(intent)
-                        viewModel.saveRecentSearch(RecentSearchItem(searchItem.stationName, searchItem.lineNumber, getCurrentDate()))
-                    }
-                )
-            }
+fun searchStation(query: String, stationList: List<StationInfo>, context: Context) {
+    val matchedStation = stationList.firstOrNull { it.stationName.equals(query, ignoreCase = true) }
+    if (matchedStation != null) {
+        val intent = Intent(context, StationActivity::class.java).apply {
+            putExtra("station_name", matchedStation.stationName)
+            putExtra("line", matchedStation.lineNumber)
         }
+        context.startActivity(intent)
+    } else {
+        // 일치하는 역이 없으면 Toast 메시지 표시
+        Toast.makeText(context, "검색과 일치하는 역이 없습니다", Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -277,7 +331,7 @@ fun RecentSearchResult(recentSearches: List<RecentSearchItem>, onDelete: (Recent
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 40.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 40.dp, bottom = 20.dp),
     ) {
         Text(
             modifier = Modifier
@@ -311,7 +365,11 @@ fun RecentSearchItemRow(recentSearchItem: RecentSearchItem, onDelete: () -> Unit
             .padding(4.dp)
             .background(Color.White, RoundedCornerShape(8.dp))
             .padding(20.dp)
-            .clickable { onClick() },
+            .clickable(
+                onClick = onClick,
+                indication = null, // 클릭 애니메이션 제거
+                interactionSource = remember { MutableInteractionSource() } // 클릭 애니메이션을 위한 interactionSource를 빈 것으로 설정
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 역 이름과 호선은 왼쪽에 배치

@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.jonghyeok.ezegot.dto.BasicStationInfo
+import com.jonghyeok.ezegot.dto.RecentSearchItem
 import com.jonghyeok.ezegot.dto.StationInfo
 
 class SharedPreferenceManager(context: Context) {
@@ -31,6 +32,21 @@ class SharedPreferenceManager(context: Context) {
         prefs.edit().putString("stationList", json).apply()
     }
 
+    // =============================================================================================
+    // 최근검색
+    // =============================================================================================
+    /// 최근 검색 역 목록 불러오기
+    fun getRecentSearches(): List<RecentSearchItem> {
+        val jsonString = prefs.getString("recentSearchList", "[]")
+        val type = object : TypeToken<List<RecentSearchItem>>() {}.type
+        return gson.fromJson(jsonString, type)
+    }
+
+    /// 최근 검색 역 목록 저장
+    fun saveRecentSearchList(updatedList: List<RecentSearchItem>) {
+        val updatedJson = gson.toJson(updatedList.take(20)) // 최대 20개까지만 유지
+        prefs.edit().putString("recentSearchList", updatedJson).apply()
+    }
 
     // =============================================================================================
     // 즐겨찾기
@@ -66,18 +82,34 @@ class SharedPreferenceManager(context: Context) {
     }
 
     // =============================================================================================
-    // 최근검색
+    // 알람
     // =============================================================================================
-    /// 최근 검색 역 목록 불러오기
-    fun getRecentSearches(): List<RecentSearchItem> {
-        val jsonString = prefs.getString("recentSearchList", "[]")
-        val type = object : TypeToken<List<RecentSearchItem>>() {}.type
+    /// 알람 등록 역 목록 불러오기
+    private fun getNotificationStations(): List<BasicStationInfo> {
+        val jsonString = prefs.getString("notificationStations", "[]")
+        val type = object : TypeToken<List<BasicStationInfo>>() {}.type
         return gson.fromJson(jsonString, type)
     }
 
-    /// 최근 검색 역 목록 저장
-    fun saveRecentSearchList(updatedList: List<RecentSearchItem>) {
-        val updatedJson = gson.toJson(updatedList.take(20)) // 최대 20개까지만 유지
-        prefs.edit().putString("recentSearchList", updatedJson).apply()
+    // 알람 추가
+    fun addNotificationStation(stationInfo: BasicStationInfo) {
+        val stations = getNotificationStations().toMutableList()
+        if (!stations.contains(stationInfo)) {
+            stations.add(stationInfo)
+        }
+        val jsonString = gson.toJson(stations)
+        prefs.edit().putString("notificationStations", jsonString).apply()
+    }
+
+    // 알람 삭제
+    fun removeNotificationStation(stationInfo: BasicStationInfo) {
+        val stations = getNotificationStations().toMutableList()
+        stations.remove(stationInfo)
+        val jsonString = gson.toJson(stations)
+        prefs.edit().putString("notificationStations", jsonString).apply()
+    }
+
+    fun isNotification(stationInfo: BasicStationInfo): Boolean {
+        return getNotificationStations().contains(stationInfo)
     }
 }

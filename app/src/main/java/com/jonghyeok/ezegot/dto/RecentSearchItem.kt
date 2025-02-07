@@ -1,4 +1,4 @@
-package com.jonghyeok.ezegot
+package com.jonghyeok.ezegot.dto
 
 data class RecentSearchItem(
     val stationName: String,

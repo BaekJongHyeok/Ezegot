@@ -33,7 +33,20 @@ class StationRepository(
         pm.removeFavoriteStation(stationInfo)
     }
 
-    fun saveStation(stationInfo: BasicStationInfo) {
+    fun addStation(stationInfo: BasicStationInfo) {
         pm.addFavoriteStation(stationInfo)
+    }
+
+
+    fun isNotification(stationInfo: BasicStationInfo): Boolean {
+        return pm.isNotification(stationInfo)
+    }
+
+    fun removeNotification(stationInfo: BasicStationInfo) {
+        pm.removeNotificationStation(stationInfo)
+    }
+
+    fun addNotification(stationInfo: BasicStationInfo) {
+        pm.addNotificationStation(stationInfo)
     }
 }

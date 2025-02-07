@@ -1,11 +1,13 @@
 package com.jonghyeok.ezegot.view
 
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,21 +42,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityOptionsCompat
-import androidx.core.content.ContextCompat
-import com.jonghyeok.ezegot.MapActivity
 import com.jonghyeok.ezegot.R
 import com.jonghyeok.ezegot.SharedPreferenceManager
 import com.jonghyeok.ezegot.SubwayLine
@@ -66,6 +69,8 @@ import com.jonghyeok.ezegot.repository.MainRepository
 import com.jonghyeok.ezegot.ui.theme.App_Background_Color
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
 import com.jonghyeok.ezegot.viewModel.MainViewModel
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels {
@@ -97,8 +102,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
-    val favoriteStations: List<BasicStationInfo> by viewModel.favoriteStationList.collectAsState()
-    val favoriteArrivalInfos: Map<String, List<RealtimeArrival>> by viewModel.realtimeArrivalInfo.collectAsState()
     val nearbyStations: List<BasicStationInfo> by viewModel.nearbyStationList.collectAsState()
 
     Column(
@@ -108,7 +111,7 @@ fun MainScreen(viewModel: MainViewModel) {
         TitleBar() // 타이틀 바
         SearchBar() // 검색 바
         Spacer(Modifier.height(40.dp))
-        FavoriteBar(favoriteStations, favoriteArrivalInfos) // 즐겨찾기 바
+        FavoriteBar(viewModel) // 즐겨찾기 바
         Spacer(Modifier.height(40.dp))
         LineButtonBar() // 띠 바
         Spacer(Modifier.height(40.dp))
@@ -229,10 +232,10 @@ fun SearchBar() {
 }
 
 @Composable
-fun FavoriteBar(
-    favoriteStations: List<BasicStationInfo>,
-    favoriteArrivalInfos: Map<String, List<RealtimeArrival>>
-) {
+fun FavoriteBar(viewModel: MainViewModel) {
+    val favoriteStations: List<BasicStationInfo> by viewModel.favoriteStationList.collectAsState()
+    val favoriteArrivalInfos: Map<String, List<RealtimeArrival>> by viewModel.realtimeArrivalInfo.collectAsState()
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom,
@@ -246,13 +249,54 @@ fun FavoriteBar(
             fontWeight = FontWeight.Bold,
         )
 
-        Text(
-            modifier = Modifier.padding(end = 20.dp),
-            text = "오전 10:23",
-            fontSize = 14.sp,
-            color = Color(0xFFB0B0B0),
-            fontWeight = FontWeight.Medium
+        var currentTime by remember { mutableStateOf(LocalTime.now()) }
+
+        // 시간 포맷을 "오전 10:23" 형식으로 설정
+        val formatter = DateTimeFormatter.ofPattern("a h:mm")
+        val formattedTime = currentTime.format(formatter)
+
+        // 이미지 회전 상태
+        var rotation by remember { mutableStateOf(0f) }
+
+        // 회전 애니메이션을 추가
+        val animatedRotation by animateFloatAsState(
+            targetValue = rotation,
+            animationSpec = tween(durationMillis = 500) // 회전 애니메이션 속도 설정
         )
+
+        Row(
+            modifier = Modifier
+                .padding(end = 24.dp)
+                .clickable {
+                    // 클릭 시 현재 시간을 다시 가져와서 업데이트
+                    currentTime = LocalTime.now()
+                    viewModel.fetchRealtimeArrival() // 추가로 viewModel 메서드 호출
+
+                    // 회전 값 업데이트 (360도 회전)
+                    rotation += 360f
+                },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = formattedTime,
+                fontSize = 14.sp,
+                color = Color(0xFFB0B0B0),
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            // 회전 애니메이션을 적용한 이미지
+            Image(
+                modifier = Modifier
+                    .size(14.dp)
+                    .graphicsLayer(
+                        rotationZ = animatedRotation // 회전 값 적용
+                    ),
+                painter = painterResource(id = R.drawable.ic_refresh),
+                contentDescription = "Refresh Icon",
+            )
+        }
     }
 
     if (favoriteStations.isEmpty()) {
@@ -268,21 +312,11 @@ fun FavoriteBar(
             items(favoriteStations) { favoriteStation ->
                 val lineId = SubwayLine.getLineId(favoriteStation.lineNumber)
 
-                val upArrivalInfo = mutableListOf<RealtimeArrival>()
-                val downArrivalInfo = mutableListOf<RealtimeArrival>()
-
                 val arrivalInfo = favoriteArrivalInfos[favoriteStation.stationName] ?: return@items
-                arrivalInfo.forEach { arrival ->
-                    if (arrival.subwayId != lineId) {
-                        return@forEach
-                    }
 
-                    if (arrival.updnLine == "상행") {
-                        upArrivalInfo.add(arrival)
-                    } else {
-                        downArrivalInfo.add(arrival)
-                    }
-                }
+                // 상행 / 하행 데이터 필터링
+                val upArrivalInfo = arrivalInfo.filter { it.subwayId == lineId && it.updnLine == "상행" }.take(2)
+                val downArrivalInfo = arrivalInfo.filter { it.subwayId == lineId && it.updnLine != "상행" }.take(2)
 
                 FavoriteCard(favoriteStation, upArrivalInfo, downArrivalInfo)
             }
@@ -338,8 +372,8 @@ fun EmptyFavoriteCard() {
 @Composable
 fun FavoriteCard(
     station: BasicStationInfo,
-    upArrivalInfos: MutableList<RealtimeArrival>,
-    downArrivalInfos: MutableList<RealtimeArrival>
+    upArrivalInfos: List<RealtimeArrival>,
+    downArrivalInfos: List<RealtimeArrival>
 ) {
     val context = LocalContext.current
 
@@ -470,6 +504,7 @@ fun FavoriteCard(
 
 @Composable
 fun LineButtonBar() {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -482,10 +517,14 @@ fun LineButtonBar() {
             )
             .clip(RoundedCornerShape(12.dp)) // 둥근 모서리를 적용
             .background(Color(0xFF7BAFF6)) // 배경색
+            .clickable {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.letskorail.com/"))
+                context.startActivity(intent)
+            }
     ) {
         Text(
             modifier = Modifier.align(Alignment.Center),
-            text = "기차 / KTX 운행 정보 보러가기",
+            text = "기차 / KTX 승차권 예매 하기",
             fontSize = 14.sp,
             color = Color(0xFFFFFFFF),
             fontWeight = FontWeight.Medium,

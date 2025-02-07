@@ -1,7 +1,8 @@
 package com.jonghyeok.ezegot.viewModel
 
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
-import com.jonghyeok.ezegot.RecentSearchItem
+import com.jonghyeok.ezegot.dto.RecentSearchItem
 import com.jonghyeok.ezegot.dto.StationInfo
 import com.jonghyeok.ezegot.repository.SearchRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,6 +12,9 @@ import kotlinx.coroutines.flow.asStateFlow
 class SearchViewModel(private val repository: SearchRepository) : ViewModel() {
     private val _stationList = MutableStateFlow<List<StationInfo>>(emptyList())
     val stationList: StateFlow<List<StationInfo>> = _stationList.asStateFlow()
+
+    private val _textState = MutableStateFlow(TextFieldValue(""))
+    val textState: StateFlow<TextFieldValue> = _textState.asStateFlow()
 
     private val _recentSearches = MutableStateFlow<List<RecentSearchItem>>(emptyList())
     val recentSearches: StateFlow<List<RecentSearchItem>> = _recentSearches
@@ -26,6 +30,11 @@ class SearchViewModel(private val repository: SearchRepository) : ViewModel() {
     // 역 전체 리스트
     fun getStationList() {
         _stationList.value = repository.getStationList()
+    }
+
+    // 검색 텍스트
+    fun onTextChange(newText: TextFieldValue) {
+        _textState.value = newText
     }
 
     // 최근 검색 기록 추가
