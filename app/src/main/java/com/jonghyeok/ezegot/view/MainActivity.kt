@@ -65,6 +65,7 @@ import com.jonghyeok.ezegot.api.RetrofitInstance
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.modelFactory.MainViewModelFactory
+import com.jonghyeok.ezegot.repository.LocationRepository
 import com.jonghyeok.ezegot.repository.MainRepository
 import com.jonghyeok.ezegot.ui.theme.App_Background_Color
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
@@ -74,7 +75,7 @@ import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels {
-        MainViewModelFactory(MainRepository(RetrofitInstance.api2, SharedPreferenceManager(this)))
+        MainViewModelFactory(MainRepository(RetrofitInstance.api2, SharedPreferenceManager(this)), LocationRepository(this))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,6 +98,7 @@ class MainActivity : ComponentActivity() {
 
         viewModel.getFavoriteStationList()
         viewModel.fetchRealtimeArrival()
+        viewModel.requestLocationUpdates()
     }
 }
 
@@ -567,12 +569,11 @@ fun NearbyBar(nearbyStations: List<BasicStationInfo>) {
                         )
                         .clip(RoundedCornerShape(12.dp))
                         .clickable {
-                            context.startActivity(
-                                Intent(
-                                    context,
-                                    StationActivity::class.java
-                                )
-                            )
+                            val intent = Intent(context, StationActivity::class.java).apply {
+                                putExtra("station_name", station.stationName)
+                                putExtra("line", station.lineNumber)
+                            }
+                            context.startActivity(intent)
                         }, // 둥근 모서리 설정
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp), // 그림자 효과
                     colors = CardDefaults.cardColors(containerColor = Color.White) // 배경색 설정

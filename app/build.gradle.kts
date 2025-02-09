@@ -76,6 +76,7 @@ dependencies {
 
     // Gson 라이브러리 추가
     implementation(libs.gson)
+    implementation(libs.converter.gson)
 
     // Retrofit 추가
     implementation(libs.retrofit)

@@ -33,6 +33,7 @@ class SplashActivity : ComponentActivity() {
         }
 
         viewModel.fetchStations()
+        viewModel.fetchStationsLocation()
     }
 }
 

@@ -3,6 +3,7 @@ package com.jonghyeok.ezegot
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RecentSearchItem
 import com.jonghyeok.ezegot.dto.StationInfo
@@ -30,6 +31,23 @@ class SharedPreferenceManager(context: Context) {
     fun saveAllStationList(allStationList: List<StationInfo>) {
         val json = gson.toJson(allStationList) // List<Station>을 JSON 문자열로 변환
         prefs.edit().putString("stationList", json).apply()
+    }
+
+    // 전체 역 위치 정보 저장
+    fun saveAllStationsLocation(stationList: List<StationInfoResponse>) {
+        val json = gson.toJson(stationList) // List<StationInfoResponse>을 JSON 문자열로 변환
+        prefs.edit().putString("stationsLocationList", json).apply() // SharedPreferences에 저장
+    }
+
+    // 전체 역 위치 정보 가져오기
+    fun getStationsLocationList(): List<StationInfoResponse> {
+        val json = prefs.getString("stationsLocationList", null)
+        return if (json != null) {
+            val stationListType = object : TypeToken<List<StationInfoResponse>>() {}.type
+            gson.fromJson(json, stationListType) // JSON을 List<StationInfoResponse>로 변환
+        } else {
+            emptyList() // 예외 처리: 데이터가 없으면 빈 리스트 반환
+        }
     }
 
     // =============================================================================================

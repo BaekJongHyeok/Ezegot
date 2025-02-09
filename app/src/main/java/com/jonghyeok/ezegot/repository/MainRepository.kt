@@ -1,6 +1,7 @@
 package com.jonghyeok.ezegot.repository
 
 import com.jonghyeok.ezegot.SharedPreferenceManager
+import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
@@ -28,7 +29,7 @@ class MainRepository(
         }
     }
 
-    fun getNearbyStations(latitude: Double, longitude: Double): List<BasicStationInfo> {
-        return emptyList()
+    fun getStationsLocationList(): List<StationInfoResponse> {
+        return pm.getStationsLocationList()
     }
 }
