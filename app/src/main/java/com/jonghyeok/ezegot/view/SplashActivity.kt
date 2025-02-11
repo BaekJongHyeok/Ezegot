@@ -1,9 +1,13 @@
 package com.jonghyeok.ezegot.view
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -24,16 +28,28 @@ class SplashActivity : ComponentActivity() {
         SplashViewModelFactory(SplashRepository(SharedPreferenceManager(this)))
     }
 
+    private val locationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { showSplashView() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        permissionCheck();
+    }
+
+    private fun permissionCheck() {
+        // 위치 권한 확인
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            showSplashView()
+        } else {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    private fun showSplashView() {
         setContent {
             Egegot_mkTheme {
                 SplashScreen(viewModel)
             }
         }
-
-        viewModel.fetchStations()
-        viewModel.fetchStationsLocation()
     }
 }
 
@@ -45,12 +61,7 @@ fun SplashScreen(viewModel: SplashViewModel) {
 
     LaunchedEffect(isLoading) {
         if (!isLoading) {
-            val intent = if (errorState == null) {
-                Intent(context, MainActivity::class.java)
-            } else {
-                Intent(context, MainActivity::class.java)
-            }
-            context.startActivity(intent)
+            context.startActivity(Intent(context, MainActivity::class.java))
             (context as SplashActivity).finish()
         }
     }

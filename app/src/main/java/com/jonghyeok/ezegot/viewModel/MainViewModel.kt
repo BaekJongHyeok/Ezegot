@@ -30,12 +30,12 @@ class MainViewModel(
     val currentLocation: StateFlow<Location?> = _currentLocation.asStateFlow()
 
     // 즐겨찾기 역 리스트
-    fun getFavoriteStationList() {
+    fun updateFavoriteStation() {
         _favoriteStationList.value = repository.getFavoriteStations()
     }
 
     // 실시간 도착 정보 조회
-    fun fetchRealtimeArrival() {
+    fun loadRealtimeArrival() {
         viewModelScope.launch {
             val updatedArrivalInfo = mutableMapOf<String, List<RealtimeArrival>>()
 
@@ -80,7 +80,7 @@ class MainViewModel(
 
 
     // 위치 업데이트 요청
-    fun requestLocationUpdates() {
+    fun updateCurrentLocation() {
         viewModelScope.launch {
             locationRepository.requestLocationUpdates()
                 .collect { location ->
@@ -110,5 +110,4 @@ class MainViewModel(
 
         return R * c // 두 지점 간의 거리 (단위: km)
     }
-
 }

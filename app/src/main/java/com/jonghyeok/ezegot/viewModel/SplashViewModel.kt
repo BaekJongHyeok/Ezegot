@@ -24,7 +24,12 @@ class SplashViewModel(private val repository: SplashRepository) : ViewModel() {
     private val _stationsLocationList = MutableStateFlow<List<StationInfoResponse>>(emptyList())
     val stationsLocationList: StateFlow<List<StationInfoResponse>> = _stationsLocationList
 
-    fun fetchStations() {
+    init {
+        loadAllStationsInfo()
+        loadAllStationsLocation()
+    }
+
+    private fun loadAllStationsInfo() {
         viewModelScope.launch {
             try {
                 val response = RetrofitInstance.api.getStations()
@@ -43,7 +48,7 @@ class SplashViewModel(private val repository: SplashRepository) : ViewModel() {
         }
     }
 
-    fun fetchStationsLocation() {
+    private fun loadAllStationsLocation() {
         viewModelScope.launch {
             try {
                 val response = RetrofitInstance.api3.getStationsLocation()
