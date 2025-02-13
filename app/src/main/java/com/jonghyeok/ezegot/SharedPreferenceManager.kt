@@ -16,7 +16,7 @@ class SharedPreferenceManager(context: Context) {
     // 전체 역 정보
     // =============================================================================================
     /// 역 정보 가져오기
-    fun getStationList(): List<StationInfo> {
+    fun getAllStationList(): List<StationInfo> {
         val json = prefs.getString("stationList", null)
         return if (json != null) {
             val gson = Gson()

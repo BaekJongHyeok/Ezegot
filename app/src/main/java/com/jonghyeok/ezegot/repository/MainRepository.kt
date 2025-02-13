@@ -5,6 +5,7 @@ import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.dto.StationInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -12,6 +13,10 @@ class MainRepository(
     private val apiService: SubwayApiService,
     private val pm : SharedPreferenceManager
 ) {
+    // 전체 역 정보
+    fun getAllStationList(): List<StationInfo> {
+        return pm.getAllStationList()
+    }
 
     // 즐겨찾기 저장된 역 정보
     fun getFavoriteStations(): List<BasicStationInfo> {
@@ -32,4 +37,6 @@ class MainRepository(
     fun getStationsLocationList(): List<StationInfoResponse> {
         return pm.getStationsLocationList()
     }
+
+
 }

@@ -9,7 +9,7 @@ class SearchRepository(
 ) {
 
     fun getStationList(): List<StationInfo> {
-        return pm.getStationList()
+        return pm.getAllStationList()
     }
 
     fun saveRecentSearchList(station: List<RecentSearchItem>) {

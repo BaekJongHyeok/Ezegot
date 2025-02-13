@@ -108,8 +108,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
-
-
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -501,7 +499,6 @@ fun LineButtonBar() {
 @Composable
 fun NearbyBar(viewModel: MainViewModel) {
     val context = LocalContext.current
-
 
     var isPermissionGranted = false
     if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {

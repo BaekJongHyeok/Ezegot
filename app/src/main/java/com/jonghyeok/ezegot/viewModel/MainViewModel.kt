@@ -5,19 +5,26 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.dto.StationInfo
 import com.jonghyeok.ezegot.repository.LocationRepository
 import com.jonghyeok.ezegot.repository.MainRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.*
 
 class MainViewModel(
     private val repository: MainRepository,
     private val locationRepository: LocationRepository
 ): ViewModel() {
-    private val _favoriteStationList = MutableStateFlow<List<BasicStationInfo>>(emptyList())
+
+    private val _allStationList = MutableStateFlow(repository.getAllStationList())
+    val stationList: StateFlow<List<StationInfo>> = _allStationList.asStateFlow()
+
+    private val _favoriteStationList = MutableStateFlow(repository.getFavoriteStations())
     val favoriteStationList: StateFlow<List<BasicStationInfo>> = _favoriteStationList.asStateFlow()
 
     private val _realtimeArrivalInfo = MutableStateFlow<Map<String, List<RealtimeArrival>>>(emptyMap())
@@ -28,6 +35,10 @@ class MainViewModel(
 
     private val _currentLocation = MutableStateFlow<Location?>(null)
     val currentLocation: StateFlow<Location?> = _currentLocation.asStateFlow()
+
+    init {
+        updateFavoriteStation()
+    }
 
     // 즐겨찾기 역 리스트
     fun updateFavoriteStation() {
@@ -49,33 +60,43 @@ class MainViewModel(
     }
 
     // 근처 역 정보
-    fun fetchNearbyStations(latitude: Double, longitude: Double) {
-        // 저장된 역 위치 리스트 가져오기 (SharedPreference에서 가져온 역 위치 정보)
-        val stationsLocationList = repository.getStationsLocationList()
+    private fun fetchNearbyStations(latitude: Double, longitude: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val stationsLocationList = repository.getStationsLocationList()
+            val allStationList = _allStationList.value
 
-        // 3km 이내의 역들 필터링 후 거리 기준으로 정렬
-        val nearbyStations = stationsLocationList
-            .map { station ->
-                val stationLat = station.latitude
-                val stationLon = station.longitude
-
-                // 현재 좌표와 역의 좌표 간 거리 계산
-                val distance = calculateDistance(latitude, longitude, stationLat, stationLon)
-
-                // 각 역에 거리 정보 추가
-                station to distance
+            // 1차 필터링: 맨해튼 거리(근사값)로 3.5km 이하만 남김
+            val roughFilteredStations = stationsLocationList.filter { station ->
+                fastDistance(latitude, longitude, station.latitude, station.longitude) < 3.5
             }
-            .filter { (_, distance) -> distance <= 3 } // 3km 이내의 역만 필터링
-            .sortedBy { (_, distance) -> distance } // 거리 기준으로 오름차순 정렬
-            .map { (station, _) ->
+
+            // 2차 필터링: Haversine 적용 후 3km 이내 정렬
+            val nearbyLocations = roughFilteredStations
+                .mapNotNull { station ->
+                    val distance = calculateDistance(latitude, longitude, station.latitude, station.longitude)
+                    if (distance <= 3) station to distance else null
+                }
+                .sortedBy { it.second } // 거리 기준 정렬
+
+            val groupedStations = nearbyLocations.flatMap { (location, _) ->
+                allStationList.filter { it.stationName == location.stationName }
+            }.map { station ->
                 BasicStationInfo(
                     stationName = station.stationName,
-                    lineNumber = station.lineName
+                    lineNumber = station.lineNumber
                 )
             }
 
-        // 정렬된 근처 역들 업데이트
-        _nearbyStationList.value = nearbyStations
+            // UI 업데이트 (메인 스레드)
+            withContext(Dispatchers.Main) {
+                _nearbyStationList.value = groupedStations
+            }
+        }
+    }
+
+    // 맨해튼 거리 (빠른 근사 거리 계산)
+    private fun fastDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        return abs(lat1 - lat2) + abs(lon1 - lon2)
     }
 
 
@@ -84,11 +105,9 @@ class MainViewModel(
         viewModelScope.launch {
             locationRepository.requestLocationUpdates()
                 .collect { location ->
-                    _currentLocation.value = location
-
-                    // 위치가 업데이트될 때마다 근처 역 목록 갱신
-                    location?.let {
-                        fetchNearbyStations(it.latitude, it.longitude)
+                    if (_currentLocation.value != location) { // 중복 업데이트 방지
+                        _currentLocation.value = location
+                        fetchNearbyStations(location.latitude, location.longitude)
                     }
                 }
         }
@@ -97,17 +116,14 @@ class MainViewModel(
     // 거리 계산 함수 (Haversine 공식)
     private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val R = 6371 // 지구 반지름 (단위: km)
-        val lat1Rad = Math.toRadians(lat1)
-        val lon1Rad = Math.toRadians(lon1)
-        val lat2Rad = Math.toRadians(lat2)
-        val lon2Rad = Math.toRadians(lon2)
 
-        val dLat = lat2Rad - lat1Rad
-        val dLon = lon2Rad - lon1Rad
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+
+        val lat1Rad = Math.toRadians(lat1)
+        val lat2Rad = Math.toRadians(lat2)
 
         val a = sin(dLat / 2).pow(2) + cos(lat1Rad) * cos(lat2Rad) * sin(dLon / 2).pow(2)
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        return R * c // 두 지점 간의 거리 (단위: km)
+        return R * (2 * atan2(sqrt(a), sqrt(1 - a))) // 두 지점 간의 거리 (km)
     }
 }

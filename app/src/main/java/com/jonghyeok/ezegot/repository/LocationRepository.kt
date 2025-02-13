@@ -14,9 +14,7 @@ class LocationRepository(context: Context) {
 
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
-    private val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-        .setMinUpdateIntervalMillis(2000)
-        .build()
+    private val locationRequest = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 1000).build()
 
     @SuppressLint("MissingPermission")
     fun requestLocationUpdates() = callbackFlow<Location> {
