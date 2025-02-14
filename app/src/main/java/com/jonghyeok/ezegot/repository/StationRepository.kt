@@ -1,6 +1,7 @@
 package com.jonghyeok.ezegot.repository
 
 import com.jonghyeok.ezegot.SharedPreferenceManager
+import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
@@ -48,5 +49,9 @@ class StationRepository(
 
     fun addNotification(stationInfo: BasicStationInfo) {
         pm.addNotificationStation(stationInfo)
+    }
+
+    fun getStationsLocationList(): List<StationInfoResponse> {
+        return pm.getStationsLocationList()
     }
 }

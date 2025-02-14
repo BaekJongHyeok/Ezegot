@@ -7,5 +7,6 @@ data class StationInfoResponse(
     @SerializedName("stnKrNm") val stationName: String,
     @SerializedName("lineNm") val lineName: String,
     @SerializedName("convX") val longitude: Double,
-    @SerializedName("convY") val latitude: Double
+    @SerializedName("convY") val latitude: Double,
+    val address: String? = null
 )

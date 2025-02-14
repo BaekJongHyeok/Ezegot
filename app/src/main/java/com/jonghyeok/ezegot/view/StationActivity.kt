@@ -1,6 +1,8 @@
 package com.jonghyeok.ezegot.view
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -29,8 +31,10 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,10 +49,17 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.rememberCameraPositionState
 import com.jonghyeok.ezegot.R
 import com.jonghyeok.ezegot.SharedPreferenceManager
 import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.api.RetrofitInstance
+import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.modelFactory.StationViewModelFactory
@@ -86,10 +97,25 @@ class StationActivity : ComponentActivity() {
 
 @Composable
 fun StationScreen(viewModel: StationViewModel) {
-    val stationInfo: BasicStationInfo? by viewModel.stationInfo.collectAsState()
-    val arrivalInfo: List<RealtimeArrival> by viewModel.arrivalInfo.collectAsState()
-    val isFavorite: Boolean by viewModel.isFavorite.collectAsState()
-    val isNotification: Boolean by viewModel.isNotification.collectAsState()
+    val context = LocalContext.current
+    val fusedLocationProviderClient = remember {
+        LocationServices.getFusedLocationProviderClient(context)
+    }
+
+    val stationsLocation by viewModel.stationLocation.collectAsState()
+    val stationInfo by viewModel.stationInfo.collectAsState()
+    val arrivalInfo by viewModel.arrivalInfo.collectAsState()
+    val isFavorite by viewModel.isFavorite.collectAsState()
+    val isNotification by viewModel.isNotification.collectAsState()
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
+                val defaultLatLng = LatLng(location?.latitude ?: 37.5665, location?.longitude ?: 126.9780) // 서울 기본 위치
+                viewModel.loadStationLocation(stationInfo?.stationName ?: "", defaultLatLng)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -103,9 +129,9 @@ fun StationScreen(viewModel: StationViewModel) {
         Spacer(Modifier.height(20.dp))
         RouteMapBar()                               // 노선도
         Spacer(Modifier.height(20.dp))
-        EnterInfoBar()                              // 출입구 정보
+        if (stationsLocation != null) { EnterInfoBar(stationsLocation!!) }  // 출입구 정보
         Spacer(Modifier.height(20.dp))
-        StationInfoBar()                            // 지하철 역 정보
+        StationInfoBar(stationsLocation?.address ?: "주소를 찾지 못했습니다")                            // 지하철 역 정보
         Spacer(Modifier.height(20.dp))
     }
 }
@@ -411,37 +437,41 @@ fun RouteMapBar() {
 }
 
 @Composable
-fun EnterInfoBar() {
+fun EnterInfoBar(stationLocation: StationInfoResponse) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .shadow(
                 elevation = 2.dp,
-                shape = RoundedCornerShape(12.dp),
-                spotColor = Color(0xFF7090B0)
+                shape = RoundedCornerShape(12.dp)
             )
             .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(horizontal = 24.dp)
-            .padding(top = 20.dp, bottom = 24.dp)
+            .padding(horizontal = 24.dp, vertical = 20.dp)
     ) {
         Text(
             modifier = Modifier.padding(bottom = 10.dp),
             text = "출구 정보",
             style = TextStyle(fontSize = 18.sp, color = Color(0xFF2F2F2F), fontWeight = FontWeight.SemiBold)
         )
-
-        Image(
-            modifier = Modifier.fillMaxWidth(),
-            painter = painterResource(id = R.drawable.map_test),
-            contentDescription = "Enter Map Icon",
-            contentScale = ContentScale.Crop
-        )
+        Box(
+            modifier = Modifier.fillMaxWidth().height(200.dp)
+        ) {
+            GoogleMap(
+                modifier = Modifier.matchParentSize(),
+                cameraPositionState = rememberCameraPositionState {
+                    position = CameraPosition.fromLatLngZoom(
+                        LatLng(stationLocation.latitude, stationLocation.longitude),
+                        15f // 줌 레벨 조정
+                    )
+                }
+            )
+        }
     }
 }
 
 @Composable
-fun StationInfoBar() {
+fun StationInfoBar(address: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -472,7 +502,7 @@ fun StationInfoBar() {
             )
 
             Text(
-                text = "경기도 수원시 팔달구 덕영대로 944",
+                text = address,
                 style = TextStyle(fontSize = 14.sp, color = Color(0xFF868686), fontWeight = FontWeight.Light)
             )
         }

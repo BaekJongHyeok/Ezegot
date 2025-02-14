@@ -1,10 +1,16 @@
 package com.jonghyeok.ezegot.viewModel
 
+import android.location.Address
+import android.location.Geocoder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jonghyeok.ezegot.repository.StationRepository
+import com.google.android.gms.maps.model.LatLng
+import com.jonghyeok.ezegot.App.Companion.context
+import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.repository.StationRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +29,9 @@ class StationViewModel(private val repository: StationRepository) : ViewModel() 
 
     private val _isNotification = MutableStateFlow(false)
     val isNotification: StateFlow<Boolean> = _isNotification.asStateFlow()
+
+    private val _stationLocation = MutableStateFlow<StationInfoResponse?>(null)
+    val stationLocation: StateFlow<StationInfoResponse?> = _stationLocation.asStateFlow()
 
 
     // 역 기초 정보 설정
@@ -62,4 +71,44 @@ class StationViewModel(private val repository: StationRepository) : ViewModel() 
         _isNotification.value = !_isNotification.value
 
     }
+
+    // 역 위치 가져오기
+    fun loadStationLocation(stationName: String, defaultLocation: LatLng) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val stationsLocationList = repository.getStationsLocationList()
+            var targetStation = stationsLocationList.find { it.stationName == stationName }
+
+            // 데이터가 있으면 해당 station의 주소를 업데이트
+            if (targetStation != null) {
+                val address = getAddressFromCoordinates(targetStation.latitude, targetStation.longitude)
+                targetStation = targetStation.copy(address = address)
+            }
+
+            // 데이터가 없으면 기본 위치 사용
+            val station = targetStation ?: StationInfoResponse(
+                stationId = "default",
+                stationName = "현재 위치",
+                lineName = "N/A",
+                longitude = defaultLocation.longitude,
+                latitude = defaultLocation.latitude,
+                address = getAddressFromCoordinates(defaultLocation.latitude, defaultLocation.longitude)
+            )
+
+            _stationLocation.value = station
+        }
+    }
+
+    // 위경도로 주소 가져오기
+    private fun getAddressFromCoordinates(latitude: Double, longitude: Double): String {
+        val geocoder = Geocoder(context)
+        val addresses: List<Address>? = geocoder.getFromLocation(latitude, longitude, 1)
+
+        return if (!addresses.isNullOrEmpty()) {
+            val address = addresses[0]
+            address.getAddressLine(0) // 전체 주소
+        } else {
+            "주소를 찾을 수 없습니다."
+        }
+    }
+
 }

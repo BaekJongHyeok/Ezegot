@@ -59,10 +59,20 @@ fun SplashScreen(viewModel: SplashViewModel) {
     val isLoading = viewModel.loadingState.collectAsState().value
     val errorState = viewModel.errorState.collectAsState().value
 
+    // loadingState가 false로 바뀔 때까지 기다린 후 MainActivity로 이동
     LaunchedEffect(isLoading) {
         if (!isLoading) {
+            // MainActivity로 이동
             context.startActivity(Intent(context, MainActivity::class.java))
             (context as SplashActivity).finish()
+        }
+    }
+
+    // 에러 상태 처리 (optional)
+    LaunchedEffect(errorState) {
+        if (errorState != null) {
+            // 에러 메시지가 있을 경우 처리
+            Log.e("SplashActivity", "Error: $errorState")
         }
     }
 
