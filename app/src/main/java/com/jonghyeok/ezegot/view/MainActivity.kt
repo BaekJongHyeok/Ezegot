@@ -249,11 +249,20 @@ fun FavoriteBar(viewModel: MainViewModel) {
                 val arrivalInfo = favoriteArrivalInfos[favoriteStation.stationName] ?: return@items
 
                 // 상행 / 하행 데이터 필터링
-                val upArrivalInfo = arrivalInfo.filter { it.subwayId == lineId && it.updnLine == "상행" }.take(2)
-                val downArrivalInfo = arrivalInfo.filter { it.subwayId == lineId && it.updnLine != "상행" }.take(2)
+                val upArrivalInfo = arrivalInfo.filter { it.subwayId == lineId && it.updnLine == "상행" }
+                val downArrivalInfo = arrivalInfo.filter { it.subwayId == lineId && it.updnLine != "상행" }
 
-                FavoriteCard(favoriteStation, upArrivalInfo, downArrivalInfo)
+                // 중복 제거 (subwayId, updnLine, bstatnNm을 기준으로)
+                val distinctUpArrivalInfo = upArrivalInfo.distinctBy { it.subwayId to it.updnLine to it.bstatnNm }
+                val distinctDownArrivalInfo = downArrivalInfo.distinctBy { it.subwayId to it.updnLine to it.bstatnNm }
+
+                // 중복을 제거한 후 각 리스트에서 최대 2개씩만 가져오기
+                val upArrivalInfoLimited = distinctUpArrivalInfo.take(2)
+                val downArrivalInfoLimited = distinctDownArrivalInfo.take(2)
+
+                FavoriteCard(favoriteStation, upArrivalInfoLimited, downArrivalInfoLimited)
             }
+
         }
 
         PageIndicator(favoriteStationInfos.size)

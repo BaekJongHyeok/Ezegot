@@ -326,6 +326,9 @@ fun ArrivalCardRow(stationArrivalInfo: List<RealtimeArrival>, line: String) {
     val upArrivalInfo = stationArrivalInfo.filter { it.subwayId == lineId && it.updnLine == "상행" }
     val downArrivalInfo = stationArrivalInfo.filter { it.subwayId == lineId && it.updnLine != "상행" }
 
+    val distinctUpArrivalInfo = upArrivalInfo.distinctBy { it.subwayId to it.updnLine to it.bstatnNm }
+    val distinctDownArrivalInfo = downArrivalInfo.distinctBy { it.subwayId to it.updnLine to it.bstatnNm }
+
     val upDt = upArrivalInfo.firstOrNull()?.bstatnNm ?: ""
     val dnDt = downArrivalInfo.firstOrNull()?.bstatnNm ?: ""
 
@@ -335,13 +338,13 @@ fun ArrivalCardRow(stationArrivalInfo: List<RealtimeArrival>, line: String) {
     ) {
         ArrivalCard(
             modifier = Modifier.weight(1f),
-            arrivals = upArrivalInfo,
+            arrivals = distinctUpArrivalInfo,
             dt = upDt,
         )
 
         ArrivalCard(
             modifier = Modifier.weight(1f),
-            arrivals = downArrivalInfo,
+            arrivals = distinctDownArrivalInfo,
             dt = dnDt,
         )
     }

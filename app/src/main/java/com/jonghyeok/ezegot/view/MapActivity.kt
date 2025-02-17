@@ -140,9 +140,7 @@ fun MapViewWithCurrentLocation() {
             cameraPositionState = cameraPositionState,
             properties = MapProperties(isMyLocationEnabled = currentLocation != null)
         ) {
-            currentLocation?.let { location ->
-                Marker(state = MarkerState(position = location), title = "현재 위치")
-            }
+
         }
     }
 }

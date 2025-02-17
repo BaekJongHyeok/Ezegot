@@ -1,6 +1,5 @@
 package com.jonghyeok.ezegot.viewModel
 
-import android.location.Address
 import android.location.Geocoder
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -10,9 +9,14 @@ import com.jonghyeok.ezegot.api.RetrofitInstance
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.StationInfo
 import com.jonghyeok.ezegot.repository.SplashRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.util.Locale
 
 open class BaseViewModel<T : Any>(
     private val repository: T
@@ -41,8 +45,23 @@ open class BaseViewModel<T : Any>(
     val errorState: StateFlow<String?> get() = _errorState
 
     init {
-        loadAllStationsInfo() // 전체 역 정보
-        loadAllStationsLocation() // 전체 역 위치
+        loadAllData()
+    }
+
+    private fun loadAllData() {
+        viewModelScope.launch {
+            val stationsInfoDeferred = async { loadAllStationsInfo() }
+            val stationsLocationDeferred = async { loadAllStationsLocation() }
+
+            // 두 요청이 완료될 때까지 대기
+            stationsInfoDeferred.await()
+            stationsLocationDeferred.await()
+
+            _loadingState.value = false
+
+            processStationAddresses()
+
+        }
     }
 
     private fun loadAllStationsInfo() {
@@ -50,11 +69,9 @@ open class BaseViewModel<T : Any>(
             try {
                 val response = RetrofitInstance.api.getStations()
                 if (response.stationList.isNotEmpty()) {
-
                     _allStationsInfoList.value = response.stationList
                     val splashRepository: SplashRepository = repository as SplashRepository
                     splashRepository.saveAllStationList(response.stationList)
-
                 } else {
                     _errorState.value = "No data available"
                 }
@@ -67,6 +84,7 @@ open class BaseViewModel<T : Any>(
         }
     }
 
+
     private fun loadAllStationsLocation() {
         viewModelScope.launch {
             try {
@@ -74,16 +92,9 @@ open class BaseViewModel<T : Any>(
 
                 if (response.isSuccessful) {
                     response.body()?.let { stationList ->
-                        // 각 역의 위경도를 사용하여 주소를 가져옵니다.
-                        val updatedStations = stationList.map { station ->
-                            val address = getAddressFromCoordinates(station.latitude, station.longitude)
-                            station.copy(address = address) // 주소를 추가한 새로운 StationInfo 반환
-                        }
-
-                        _allStationsLocationList.value = updatedStations
+                        _allStationsLocationList.value = stationList // 여기서 위치 데이터만 저장
                         val splashRepository: SplashRepository = repository as SplashRepository
-                        splashRepository.saveAllStationsLocationList(updatedStations) // 수정된 리스트 저장
-
+                        splashRepository.saveAllStationsLocationList(stationList) // 원본 데이터 저장
                     } ?: run {
                         _errorState.value = "No data received"
                     }
@@ -100,15 +111,24 @@ open class BaseViewModel<T : Any>(
     }
 
     // 위경도로 주소 가져오기
-    private fun getAddressFromCoordinates(latitude: Double, longitude: Double): String {
-        val geocoder = Geocoder(context)
-        val addresses: List<Address>? = geocoder.getFromLocation(latitude, longitude, 1)
-
-        return if (!addresses.isNullOrEmpty()) {
-            val address = addresses[0]
-            address.getAddressLine(0) // 전체 주소 반환
-        } else {
-            "주소를 찾을 수 없습니다."
+    private suspend fun getAddressFromCoordinates(latitude: Double, longitude: Double): String {
+        return withContext(Dispatchers.IO) {
+            val geocoder = Geocoder(context, Locale.getDefault())
+            try {
+                val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+                addresses?.firstOrNull()?.getAddressLine(0) ?: "주소를 찾을 수 없습니다."
+            } catch (e: IOException) {
+                Log.e("SplashViewModel", "Geocoder Error: ${e.message}")
+                "주소를 가져올 수 없음"
+            }
         }
+    }
+
+    private suspend fun processStationAddresses() {
+        val updatedStations = _allStationsLocationList.value.map { station ->
+            val address = getAddressFromCoordinates(station.latitude, station.longitude)
+            station.copy(address = address)
+        }
+        _allStationsLocationList.value = updatedStations
     }
 }
