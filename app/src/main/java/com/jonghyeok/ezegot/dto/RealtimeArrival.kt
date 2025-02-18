@@ -18,6 +18,14 @@ data class RealtimeArrival(
     @field:Element(name = "trainLineNm", required = false)
     var trainLineName: String = "",
 
+    // 이전 지하철역 ID
+    @field:Element(name = "statnFid", required = false)
+    var statnFid: String = "",
+
+    // 다음 지하철역 ID
+    @field:Element(name = "statnTid", required = false)
+    var statnTid: String = "",
+
     // 도착예정열차순번 (상하행코드(1자리), 순번(첫번째, 두번째 열차 , 1자리), 첫번째 도착예정 정류장 - 현재 정류장(3자리), 목적지 정류장, 급행여부(1자리))
     @field:Element(name = "ordkey", required = false)
     var ordkey: String = "",
