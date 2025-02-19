@@ -59,13 +59,14 @@ import com.jonghyeok.ezegot.SharedPreferenceManager
 import com.jonghyeok.ezegot.dto.StationInfo
 import com.jonghyeok.ezegot.modelFactory.SearchViewModelFactory
 import com.jonghyeok.ezegot.repository.SearchRepository
+import com.jonghyeok.ezegot.repository.SharedRepository
 import com.jonghyeok.ezegot.ui.theme.App_Background_Color
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
 import com.jonghyeok.ezegot.viewModel.SearchViewModel
 
 class SearchActivity : ComponentActivity() {
     private val viewModel: SearchViewModel by viewModels {
-        SearchViewModelFactory(SearchRepository(SharedPreferenceManager(this)))
+        SearchViewModelFactory(SharedRepository(), SearchRepository(SharedPreferenceManager(this)))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -208,7 +209,7 @@ fun SearchTextBar(
     keyboardController: SoftwareKeyboardController?,
 ) {
     val context = LocalContext.current
-    val stationList by viewModel.stationList.collectAsState()
+    val stationList by viewModel.allStationsInfoList.collectAsState()
 
     Row(
         modifier = Modifier

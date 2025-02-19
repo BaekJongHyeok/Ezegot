@@ -16,16 +16,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModelProvider
 import com.jonghyeok.ezegot.SharedPreferenceManager
 import com.jonghyeok.ezegot.modelFactory.SplashViewModelFactory
+import com.jonghyeok.ezegot.repository.SharedRepository
 import com.jonghyeok.ezegot.repository.SplashRepository
 import com.jonghyeok.ezegot.ui.theme.App_Background_Color
 import com.jonghyeok.ezegot.ui.theme.Egegot_mkTheme
+import com.jonghyeok.ezegot.viewModel.BaseViewModel
 import com.jonghyeok.ezegot.viewModel.SplashViewModel
 
 class SplashActivity : ComponentActivity() {
     private val viewModel: SplashViewModel by viewModels {
-        SplashViewModelFactory(SplashRepository(SharedPreferenceManager(this)))
+        SplashViewModelFactory(SharedRepository())
     }
 
     private val locationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { showSplashView() }
@@ -61,11 +64,12 @@ fun SplashScreen(viewModel: SplashViewModel) {
 
     // loadingState가 false로 바뀔 때까지 기다린 후 MainActivity로 이동
     LaunchedEffect(isLoading) {
-        if (!isLoading) {
-            // MainActivity로 이동
-            context.startActivity(Intent(context, MainActivity::class.java))
-            (context as SplashActivity).finish()
-        }
+        context.startActivity(Intent(context, MainActivity::class.java))
+        (context as SplashActivity).finish()
+//        if (!isLoading) {
+//            context.startActivity(Intent(context, MainActivity::class.java))
+//            (context as SplashActivity).finish()
+//        }
     }
 
     // 에러 상태 처리 (optional)

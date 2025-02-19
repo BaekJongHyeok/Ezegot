@@ -3,7 +3,8 @@ package com.jonghyeok.ezegot
 import android.app.Application
 import android.content.Context
 
-class App : Application() {
+class MyApplication : Application() {
+
     companion object {
         lateinit var context: Context
     }

@@ -6,7 +6,7 @@ import android.location.Location
 import android.os.Looper
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.*
-import com.jonghyeok.ezegot.App.Companion.context
+import com.jonghyeok.ezegot.MyApplication.Companion.context
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 

@@ -19,10 +19,10 @@ import kotlin.math.*
 class MainViewModel(
     private val repository: MainRepository,
     private val locationRepository: LocationRepository
-): ViewModel() {
+): BaseViewModel() {
 
-    private val _allStationList = MutableStateFlow(repository.getAllStationList())
-    val stationList: StateFlow<List<StationInfo>> = _allStationList.asStateFlow()
+//    private val _allStationList = MutableStateFlow(repository.getAllStationList())
+//    val stationList: StateFlow<List<StationInfo>> = _allStationList.asStateFlow()
 
     private val _favoriteStationList = MutableStateFlow(repository.getFavoriteStations())
     val favoriteStationList: StateFlow<List<BasicStationInfo>> = _favoriteStationList.asStateFlow()
@@ -39,6 +39,7 @@ class MainViewModel(
     init {
         updateFavoriteStation()
     }
+
 
     // 즐겨찾기 역 리스트
     fun updateFavoriteStation() {
@@ -63,7 +64,7 @@ class MainViewModel(
     private fun fetchNearbyStations(latitude: Double, longitude: Double) {
         viewModelScope.launch(Dispatchers.IO) {
             val stationsLocationList = repository.getStationsLocationList()
-            val allStationList = _allStationList.value
+            val allStationList = allStationsInfoList.value
 
             // 1차 필터링: 맨해튼 거리(근사값)로 3.5km 이하만 남김
             val roughFilteredStations = stationsLocationList.filter { station ->

@@ -4,11 +4,10 @@ import android.location.Geocoder
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jonghyeok.ezegot.App.Companion.context
+import com.jonghyeok.ezegot.MyApplication.Companion.context
 import com.jonghyeok.ezegot.api.RetrofitInstance
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.StationInfo
-import com.jonghyeok.ezegot.repository.SplashRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,9 +17,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.Locale
 
-open class BaseViewModel<T : Any>(
-    private val repository: T
-) : ViewModel() {
+open class BaseViewModel : ViewModel() {
 
     private val _allStationsInfoList = MutableStateFlow<List<StationInfo>>(emptyList())
     val allStationsInfoList: StateFlow<List<StationInfo>> = _allStationsInfoList
@@ -44,69 +41,61 @@ open class BaseViewModel<T : Any>(
     private val _errorState = MutableStateFlow<String?>(null)
     val errorState: StateFlow<String?> get() = _errorState
 
-    init {
-        loadAllData()
-    }
 
-    private fun loadAllData() {
+    fun loadAllData() {
         viewModelScope.launch {
             val stationsInfoDeferred = async { loadAllStationsInfo() }
             val stationsLocationDeferred = async { loadAllStationsLocation() }
 
-            // 두 요청이 완료될 때까지 대기
-            stationsInfoDeferred.await()
-            stationsLocationDeferred.await()
+            val stationsInfo = stationsInfoDeferred.await()
+            val stationsLocation = stationsLocationDeferred.await()
 
-            _loadingState.value = false
-
-            processStationAddresses()
-
-        }
-    }
-
-    private fun loadAllStationsInfo() {
-        viewModelScope.launch {
-            try {
-                val response = RetrofitInstance.api.getStations()
-                if (response.stationList.isNotEmpty()) {
-                    _allStationsInfoList.value = response.stationList
-                    val splashRepository: SplashRepository = repository as SplashRepository
-                    splashRepository.saveAllStationList(response.stationList)
-                } else {
-                    _errorState.value = "No data available"
-                }
-            } catch (e: Exception) {
-                _errorState.value = "Failed to fetch data"
-                Log.e("SplashViewModel", "Error fetching stations: ${e.message}")
-            } finally {
+            // 모든 데이터가 로드된 이후 실행
+            if (stationsInfo.isNotEmpty() && stationsLocation.isNotEmpty()) {
                 _loadingState.value = false
+                processStationAddresses()
             }
         }
     }
 
 
-    private fun loadAllStationsLocation() {
-        viewModelScope.launch {
-            try {
-                val response = RetrofitInstance.api3.getStationsLocation()
-
-                if (response.isSuccessful) {
-                    response.body()?.let { stationList ->
-                        _allStationsLocationList.value = stationList // 여기서 위치 데이터만 저장
-                        val splashRepository: SplashRepository = repository as SplashRepository
-                        splashRepository.saveAllStationsLocationList(stationList) // 원본 데이터 저장
-                    } ?: run {
-                        _errorState.value = "No data received"
-                    }
-                } else {
-                    _errorState.value = "Failed to fetch station locations"
-                }
-            } catch (e: Exception) {
-                _errorState.value = "Error: ${e.message}"
-                Log.e("SplashViewModel", "Error fetching stations: ${e.message}")
-            } finally {
-                _loadingState.value = false
+    suspend fun loadAllStationsInfo(): List<StationInfo> {
+        return try {
+            val response = RetrofitInstance.api.getStations()
+            if (response.stationList.isNotEmpty()) {
+                _allStationsInfoList.value = response.stationList
+                response.stationList
+            } else {
+                _errorState.value = "No data available"
+                emptyList()
             }
+        } catch (e: Exception) {
+            _errorState.value = "Failed to fetch data"
+            Log.e("SplashViewModel", "Error fetching stations: ${e.message}")
+            emptyList()
+        }
+    }
+
+
+    private suspend fun loadAllStationsLocation(): List<StationInfoResponse> {
+        return try {
+            val response = RetrofitInstance.api3.getStationsLocation()
+            if (response.isSuccessful) {
+                response.body()?.let { stationList ->
+                    _allStationsLocationList.value = stationList
+                    stationList // 데이터를 반환
+                } ?: run {
+                    _errorState.value = "No data received"
+                    emptyList()
+                }
+            } else {
+                _errorState.value = "Failed to fetch station locations"
+                emptyList()
+            }
+        } catch (e: Exception) {
+            _errorState.value = "Error: ${e.message}"
+            Log.e("SplashViewModel", "Error fetching station locations: ${e.message}")
+            emptyList()
         }
     }
 

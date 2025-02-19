@@ -5,7 +5,7 @@ import android.location.Geocoder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
-import com.jonghyeok.ezegot.App.Companion.context
+import com.jonghyeok.ezegot.MyApplication.Companion.context
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival

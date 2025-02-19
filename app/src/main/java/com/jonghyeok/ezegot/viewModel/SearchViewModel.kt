@@ -5,13 +5,14 @@ import androidx.lifecycle.ViewModel
 import com.jonghyeok.ezegot.dto.RecentSearchItem
 import com.jonghyeok.ezegot.dto.StationInfo
 import com.jonghyeok.ezegot.repository.SearchRepository
+import com.jonghyeok.ezegot.repository.SharedRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class SearchViewModel(private val repository: SearchRepository) : ViewModel() {
-    private val _stationList = MutableStateFlow<List<StationInfo>>(emptyList())
-    val stationList: StateFlow<List<StationInfo>> = _stationList.asStateFlow()
+class SearchViewModel(private val sharedRepository: SharedRepository, private val repository: SearchRepository) : BaseViewModel() {
+
+    val a: StateFlow<List<StationInfo>> = sharedRepository.allStationsInfoList
 
     private val _textState = MutableStateFlow(TextFieldValue(""))
     val textState: StateFlow<TextFieldValue> = _textState.asStateFlow()
@@ -23,13 +24,7 @@ class SearchViewModel(private val repository: SearchRepository) : ViewModel() {
     val filteredStations: StateFlow<List<StationInfo>> = _filteredStations
 
     init {
-        getStationList()
         loadRecentSearches()
-    }
-
-    // 역 전체 리스트
-    fun getStationList() {
-        _stationList.value = repository.getStationList()
     }
 
     // 검색 텍스트
@@ -78,7 +73,7 @@ class SearchViewModel(private val repository: SearchRepository) : ViewModel() {
     }
 
     fun filterStations(query: String) {
-        _filteredStations.value = _stationList.value.filter {
+        _filteredStations.value = a.value.filter {
             it.stationName.contains(query, ignoreCase = true)
         }
     }
