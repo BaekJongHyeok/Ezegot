@@ -1,7 +1,6 @@
 package com.jonghyeok.ezegot.viewModel
 
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.lifecycle.ViewModel
 import com.jonghyeok.ezegot.dto.RecentSearchItem
 import com.jonghyeok.ezegot.dto.StationInfo
 import com.jonghyeok.ezegot.repository.SearchRepository
@@ -12,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class SearchViewModel(private val sharedRepository: SharedRepository, private val repository: SearchRepository) : BaseViewModel() {
 
-    val a: StateFlow<List<StationInfo>> = sharedRepository.allStationsInfoList
+    val allStationInfo: StateFlow<List<StationInfo>> = sharedRepository.allStationsInfoList
 
     private val _textState = MutableStateFlow(TextFieldValue(""))
     val textState: StateFlow<TextFieldValue> = _textState.asStateFlow()
@@ -73,7 +72,7 @@ class SearchViewModel(private val sharedRepository: SharedRepository, private va
     }
 
     fun filterStations(query: String) {
-        _filteredStations.value = a.value.filter {
+        _filteredStations.value = allStationInfo.value.filter {
             it.stationName.contains(query, ignoreCase = true)
         }
     }
