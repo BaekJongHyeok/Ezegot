@@ -1,21 +1,27 @@
 package com.jonghyeok.ezegot.viewModel
 
 import androidx.lifecycle.viewModelScope
-import com.jonghyeok.ezegot.repository.SharedRepository
+import com.jonghyeok.ezegot.repository.MainRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class SplashViewModel(private val sharedRepository: SharedRepository) : BaseViewModel() {
+@HiltViewModel
+class SplashViewModel @Inject constructor(
+    private val mainRepository: MainRepository
+) : BaseViewModel() {
 
     init {
-        loadAllStationInfos()
+        loadAllStations()
     }
 
-    private fun loadAllStationInfos() {
+    private fun loadAllStations() {
         viewModelScope.launch {
-            val stationsInfo = loadAllStationsInfo()
-            if (stationsInfo.isNotEmpty()) {
-                sharedRepository.updateStations(stationsInfo)
+            val stations = mainRepository.getAllStations()
+            if (stations.isNotEmpty()) {
+                setAllStations(stations)
             }
+            setLoadingState(false)
         }
     }
 }

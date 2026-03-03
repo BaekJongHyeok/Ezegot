@@ -1,5 +1,6 @@
 package com.jonghyeok.ezegot.dto
 
+import com.jonghyeok.ezegot.util.ArrivalEstimator
 import org.simpleframework.xml.Element
 import org.simpleframework.xml.Root
 
@@ -61,4 +62,59 @@ data class RealtimeArrival(
     // 막차여부
     @field:Element(name = "lstcarAt", required = false)
     var lstcarAt: String = "",
-)
+) {
+    /**
+     * 사용자 친화적인 실시간 도착 메시지 반환 함수.
+     * 1순위: barvlDt (남은 시간 초) 정보를 활용하여 "N분 후" / "곧 도착"으로 변환
+     * 2순위: barvlDt가 유효하지 않을 경우, arrivalMessage1에서 "[N]번째 전역"을 추출해 ArrivalEstimator로 정밀 시간(분) 추정.
+     */
+    fun getFormattedMessage(): String {
+        // 1. barvlDt (남은 시간 초) 기반 처리
+        val secondsLeft = barvlDt.toIntOrNull() ?: 0
+        if (secondsLeft > 0) {
+            val minutesLeft = secondsLeft / 60
+            return if (minutesLeft > 0) {
+                "${minutesLeft}분 후"
+            } else {
+                "곧 도착"
+            }
+        }
+
+        // 2. barvlDt 정보가 없을 경우 기존 arvlMsg2(arrivalMessage1) 기반 문자열 정제 및 시간 추정
+        val rawMessage = arrivalMessage1.substringBefore("(").trim()
+        
+        // "[N]번째 전역" 패턴(예: "[3]번째 전역") 처리 -> 정밀 시간 계산(ArrivalEstimator)
+        val stationRegex = Regex("\\[(\\d+)]번째 전역")
+        val matchResult = stationRegex.find(rawMessage)
+        
+        if (matchResult != null) {
+            val count = matchResult.groupValues[1].toIntOrNull() ?: return rawMessage
+            val estimatedMinutes = ArrivalEstimator.estimateMinutesFromStations(this, count)
+            return "${estimatedMinutes}분 후"
+        }
+
+        // 3. "전역" 이라는 텍스트가 단독으로 올 경우 (1정거장 전)
+        if (rawMessage == "전역") {
+            val estimatedMinutes = ArrivalEstimator.estimateMinutesFromStations(this, 1)
+            return "${estimatedMinutes}분 후"
+        }
+
+        // 4. "XX역 도착", "XX도착" 등의 텍스트 처리 -> "도착"으로 통일
+        if (rawMessage.endsWith("도착")) {
+            return "도착"
+        }
+        
+        // 5. "XX 진입", "XX진입" 등의 텍스트 처리 -> "진입"으로 통일
+        if (rawMessage.endsWith("진입")) {
+            return "진입"
+        }
+        
+        // 6. "XX 출발", "XX출발" 등의 텍스트 처리 -> "출발"으로 통일
+        if (rawMessage.endsWith("출발")) {
+            return "출발"
+        }
+
+        // 일반 텍스트의 경우 불필요한 단어 제거 혹은 그대로 반환
+        return rawMessage.ifEmpty { "정보 없음" }
+    }
+}

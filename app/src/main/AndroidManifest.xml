@@ -6,7 +6,6 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
-
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
@@ -20,21 +19,30 @@
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config">
 
-        <activity android:name=".view.SplashActivity" android:exported="true">
+        <activity
+            android:name=".view.MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".view.MainActivity" />
-        <activity android:name=".view.MapActivity" />
-        <activity android:name=".view.SearchActivity" />
-        <activity android:name=".view.StationActivity" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCqAGNDGD3h3HHFiXjGH-XCcQW8SodJylc" />
+
+        <!-- Home Screen Widget -->
+        <receiver
+            android:name=".widget.ArrivalWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/arrival_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

@@ -4,5 +4,6 @@
         <domain includeSubdomains="true">openapi.seoul.go.kr</domain>
         <domain includeSubdomains="true">swopenapi.seoul.go.kr</domain>
         <domain includeSubdomains="true">t-data.seoul.go.kr</domain>
+        <domain includeSubdomains="true">apis.data.go.kr</domain>
     </domain-config>
 </network-security-config>
