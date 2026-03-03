@@ -9,21 +9,64 @@ import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.repository.FavoriteRepository
 import com.jonghyeok.ezegot.repository.StationRepository
+import com.jonghyeok.ezegot.alarm.SubwayAlarmManager
+import com.jonghyeok.ezegot.db.SubwayAlarmDao
+import com.jonghyeok.ezegot.db.SubwayAlarmEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.Locale
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 @HiltViewModel
 class StationViewModel @Inject constructor(
     private val stationRepository: StationRepository,
-    private val favoriteRepository: FavoriteRepository
+    private val favoriteRepository: FavoriteRepository,
+    private val alarmManager: SubwayAlarmManager,
+    private val alarmDao: SubwayAlarmDao
 ) : BaseViewModel() {
+
+    private val _activeAlarms = MutableStateFlow<List<SubwayAlarmEntity>>(emptyList())
+    val activeAlarms: StateFlow<List<SubwayAlarmEntity>> = _activeAlarms.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            alarmDao.getActiveAlarms().collect {
+                _activeAlarms.value = it
+            }
+        }
+    }
+
+    fun setAlarm(arrival: RealtimeArrival, thresholdMinutes: Int = 3) {
+        val station = _stationInfo.value ?: return
+        
+        // barvlDt가 없어도 getFormattedMessage()에서 추출한 대략적인 시간을 사용
+        var arrivalSeconds = arrival.barvlDt.toIntOrNull() ?: 0
+        if (arrivalSeconds <= 0) {
+            val msg = arrival.getFormattedMessage()
+            val minutesMatch = Regex("(\\d+)분 후").find(msg)
+            if (minutesMatch != null) {
+                arrivalSeconds = (minutesMatch.groupValues[1].toIntOrNull() ?: 0) * 60
+            }
+        }
+
+        viewModelScope.launch {
+            alarmManager.scheduleAlarm(
+                stationName = station.stationName,
+                lineNumber = arrival.subwayId,
+                trainNo = arrival.trainNumber,
+                destination = arrival.bstatnNm,
+                direction = arrival.trainLineName,
+                thresholdSeconds = thresholdMinutes * 60,
+                arrivalSeconds = arrivalSeconds
+            )
+        }
+    }
+
+    fun cancelAlarm(trainNo: String, stationName: String) {
+        viewModelScope.launch {
+            alarmManager.cancelAlarmByTrain(trainNo, stationName)
+        }
+    }
 
     private val _stationInfo = MutableStateFlow<BasicStationInfo?>(null)
     val stationInfo: StateFlow<BasicStationInfo?> = _stationInfo.asStateFlow()

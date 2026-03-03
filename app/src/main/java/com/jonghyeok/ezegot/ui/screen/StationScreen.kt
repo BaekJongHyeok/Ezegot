@@ -1,7 +1,10 @@
 package com.jonghyeok.ezegot.ui.screen
 
 import android.Manifest
+import android.os.Build
 import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -43,6 +46,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.db.SubwayAlarmEntity
 import com.jonghyeok.ezegot.ui.theme.*
 import com.jonghyeok.ezegot.viewModel.StationViewModel
 
@@ -61,7 +65,57 @@ fun StationScreen(
     val isFavorite by viewModel.isFavorite.collectAsState()
     val isNotification by viewModel.isNotification.collectAsState()
     val stationLocation by viewModel.stationLocation.collectAsState()
+    val activeAlarms by viewModel.activeAlarms.collectAsState()
     
+    var showPermissionRationale by remember { mutableStateOf(false) }
+    var pendingAlarmArrival by remember { mutableStateOf<RealtimeArrival?>(null) }
+    var pendingAlarmThreshold by remember { mutableStateOf<Int?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // 권한 허용됨 -> 보류 중인 알람 설정 실행
+            pendingAlarmArrival?.let { arr ->
+                pendingAlarmThreshold?.let { threshold ->
+                    viewModel.setAlarm(arr, threshold)
+                }
+            }
+        } else {
+            // 권한 거부됨 -> 사용자에게 알림
+            android.widget.Toast.makeText(context, "알림 권한이 없으면 도착 정보를 받을 수 없습니다.", android.widget.Toast.LENGTH_SHORT).show()
+        }
+        pendingAlarmArrival = null
+        pendingAlarmThreshold = null
+    }
+
+    if (showPermissionRationale) {
+        AlertDialog(
+            onDismissRequest = { showPermissionRationale = false },
+            title = { Text("알림 권한 필요") },
+            text = { Text("지하철 도착 알림을 받으려면 알림 권한 허용이 필요합니다. 다음 화면에서 '허용'을 선택해 주세요.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionRationale = false
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }) {
+                    Text("확인")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showPermissionRationale = false 
+                    pendingAlarmArrival = null
+                    pendingAlarmThreshold = null
+                }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
+
     // 고급 기능 State
     val timeTable by viewModel.timeTable.collectAsState()
     val facilityInfo by viewModel.facilityInfo.collectAsState()
@@ -202,7 +256,31 @@ fun StationScreen(
                     val dnDtLabel = dnArr.firstOrNull()?.trainLineName?.split("-")?.lastOrNull()?.trim()
                          ?.replace("(급행)", "")?.trim() ?: defaultDn
 
-                    ArrivalInfoSection(arrivalInfo, info.lineNumber, upDtLabel, dnDtLabel, timeTable)
+                    ArrivalInfoSection(
+                        arrivals = arrivalInfo,
+                        line = info.lineNumber,
+                        upDt = upDtLabel,
+                        dnDt = dnDtLabel,
+                        timeTable = timeTable,
+                        activeAlarms = activeAlarms,
+                        onSetAlarm = { arr, threshold -> 
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                when {
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED -> {
+                                        viewModel.setAlarm(arr, threshold)
+                                    }
+                                    else -> {
+                                        pendingAlarmArrival = arr
+                                        pendingAlarmThreshold = threshold
+                                        showPermissionRationale = true
+                                    }
+                                }
+                            } else {
+                                viewModel.setAlarm(arr, threshold)
+                            }
+                        },
+                        onCancelAlarm = { trainNo -> viewModel.cancelAlarm(trainNo, stationName) }
+                    )
                     Spacer(Modifier.height(16.dp))
 
                     // 첫차 / 막차 시간표 (로딩 중에도 카드 틀은 유지)
@@ -336,7 +414,10 @@ fun ArrivalInfoSection(
     line: String,
     upDt: String,
     dnDt: String,
-    timeTable: Pair<com.jonghyeok.ezegot.api.TimeTableResponse?, com.jonghyeok.ezegot.api.TimeTableResponse?>?
+    timeTable: Pair<com.jonghyeok.ezegot.api.TimeTableResponse?, com.jonghyeok.ezegot.api.TimeTableResponse?>?,
+    activeAlarms: List<com.jonghyeok.ezegot.db.SubwayAlarmEntity>,
+    onSetAlarm: (RealtimeArrival, Int) -> Unit,
+    onCancelAlarm: (String) -> Unit
 ) {
     var isRealtime by remember { mutableStateOf(true) }
     
@@ -414,8 +495,8 @@ fun ArrivalInfoSection(
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ArrivalCard(Modifier.weight(1f), upList, upDt, upFullSchedules)
-            ArrivalCard(Modifier.weight(1f), dnList, dnDt, dnFullSchedules)
+            ArrivalCard(Modifier.weight(1f), upList, upDt, upFullSchedules, activeAlarms, onSetAlarm, onCancelAlarm)
+            ArrivalCard(Modifier.weight(1f), dnList, dnDt, dnFullSchedules, activeAlarms, onSetAlarm, onCancelAlarm)
         }
     }
 }
@@ -480,9 +561,13 @@ fun ArrivalCard(
     modifier: Modifier, 
     arrivals: List<RealtimeArrival>, 
     destination: String,
-    fullSchedules: List<com.jonghyeok.ezegot.api.TimeTableSchedule> = emptyList()
+    fullSchedules: List<com.jonghyeok.ezegot.api.TimeTableSchedule> = emptyList(),
+    activeAlarms: List<com.jonghyeok.ezegot.db.SubwayAlarmEntity>,
+    onSetAlarm: (RealtimeArrival, Int) -> Unit,
+    onCancelAlarm: (String) -> Unit
 ) {
     var showSheet by remember { mutableStateOf(false) }
+    var selectedArrivalForAlarm by remember { mutableStateOf<RealtimeArrival?>(null) }
     
     if (showSheet) {
         ModalBottomSheet(
@@ -492,6 +577,37 @@ fun ArrivalCard(
         ) {
             FullTimetableSheet(destination, fullSchedules) { showSheet = false }
         }
+    }
+
+    if (selectedArrivalForAlarm != null) {
+        AlertDialog(
+            onDismissRequest = { selectedArrivalForAlarm = null },
+            title = { Text("도착 알림 설정", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
+            text = { Text("열차 도착 몇 분 전에 알림을 받을까요?", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(1, 3, 5).forEach { min ->
+                        Button(
+                            onClick = {
+                                selectedArrivalForAlarm?.let { onSetAlarm(it, min) }
+                                selectedArrivalForAlarm = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Navy800)
+                        ) {
+                            Text("${min}분 전")
+                        }
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedArrivalForAlarm = null }) {
+                    Text("취소", color = TextSecondary)
+                }
+            },
+            containerColor = SurfaceWhite,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
     
     Surface(
@@ -518,11 +634,12 @@ fun ArrivalCard(
                 // 도착 리스트 (무조건 2개만 노출되도록 강제)
                 val displayArrivals = arrivals.take(2)
                 displayArrivals.forEach { arrival ->
+                    val isAlarmSet = activeAlarms.any { it.trainNo == arrival.trainNumber }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(28.dp), // 행 높이 명시적 고정
-                        horizontalArrangement = Arrangement.Start, // 좌측 정렬로 변경하여 간격 축소
+                            .height(32.dp), 
+                        horizontalArrangement = Arrangement.Start, 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f, fill = false)) {
@@ -551,15 +668,35 @@ fun ArrivalCard(
                                 }
                             }
                         }
-                        Spacer(Modifier.width(4.dp)) // 목적지와 시간 사이 간격 추가 축소 (4dp)
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             text = arrival.getFormattedMessage(),
                             style = MaterialTheme.typography.bodySmall,
                             color = ArrivalRed,
                             fontWeight = FontWeight.SemiBold
                         )
+                        
+                        if (arrival.trainNumber.isNotEmpty()) {
+                            IconButton(
+                                onClick = {
+                                    if (isAlarmSet) {
+                                        onCancelAlarm(arrival.trainNumber)
+                                    } else {
+                                        selectedArrivalForAlarm = arrival
+                                    }
+                                },
+                                modifier = Modifier.size(24.dp).padding(start = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isAlarmSet) Icons.Default.Notifications else Icons.Default.NotificationsNone,
+                                    contentDescription = "알람",
+                                    tint = if (isAlarmSet) SkyBlue400 else TextHint,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
-                    Spacer(Modifier.height(8.dp)) // 행 간 간격 고정
+                    Spacer(Modifier.height(4.dp)) 
                 }
                 
                 // 높이 고정: 데이터가 1개이거나 없을 때 빈 자리 채우기
@@ -568,7 +705,7 @@ fun ArrivalCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(28.dp), // 빈 행도 동일한 높이 고정
+                            .height(32.dp), 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -577,7 +714,7 @@ fun ArrivalCard(
                             color = TextHint
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(4.dp))
                 }
             }
             

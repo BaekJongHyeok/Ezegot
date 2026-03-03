@@ -25,6 +25,8 @@ gson = "2.10.1"
 # DI
 hilt = "2.51.1"
 hiltNavigationCompose = "1.2.0"
+hiltWork = "1.2.0"
+hiltCompiler = "1.2.0"
 
 # Room
 room = "2.6.1"
@@ -75,6 +77,8 @@ gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hiltWork" }
+hilt-compiler-androidx = { module = "androidx.hilt:hilt-compiler", version.ref = "hiltCompiler" }
 
 # Room
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }

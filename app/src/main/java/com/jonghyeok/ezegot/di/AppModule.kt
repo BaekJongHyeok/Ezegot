@@ -6,6 +6,7 @@ import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.db.AppDatabase
 import com.jonghyeok.ezegot.db.FavoriteStationDao
 import com.jonghyeok.ezegot.db.RecentSearchDao
+import com.jonghyeok.ezegot.db.SubwayAlarmDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -123,4 +124,8 @@ object AppModule {
     @Provides
     @Singleton
     fun provideRecentSearchDao(db: AppDatabase): RecentSearchDao = db.recentSearchDao()
+
+    @Provides
+    @Singleton
+    fun provideSubwayAlarmDao(db: AppDatabase): SubwayAlarmDao = db.subwayAlarmDao()
 }
