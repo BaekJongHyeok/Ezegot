@@ -188,22 +188,6 @@ class StationRepository @Inject constructor(
         }
 
 
-    /** 빠른 환승 위치 정보 가져오기 */
-    suspend fun getFastTransferInfo(stationName: String): com.jonghyeok.ezegot.api.TransferInfoResponse? =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                extendedApi.getFastTransferInfo(stationName)
-            }.getOrNull()
-        }
-
-    /** 역 편의시설 (엘리베이터 유무 등) 정보 가져오기 */
-    suspend fun getStationFacilityInfo(stationName: String): com.jonghyeok.ezegot.api.FacilityInfoResponse? =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                extendedApi.getStationFacilityInfo(stationName)
-            }.getOrNull()
-        }
-
     // TAGO API JSON 파싱 헬퍼 함수
     private suspend fun fetchTagoTimeTable(
         nodeId: String, 

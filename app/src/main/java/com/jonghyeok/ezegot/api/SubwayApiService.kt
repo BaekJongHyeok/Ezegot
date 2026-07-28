@@ -47,20 +47,6 @@ interface SubwayApiService {
         @Path("upDownCode") upDownCode: String  // 1:상행/내선, 2:하행/외선
     ): TimeTableResponse
 
-    /**
-     * [공공데이터포털] 출구 및 환승 정보 (빠른 환승 위치)
-     * BaseUrl: http://apis.data.go.kr/
-     */
-    @GET("api/transfer/info/{stationName}") // 실제 API 명세에 따라 수정 필요
-    suspend fun getFastTransferInfo(@Path("stationName") stationName: String): TransferInfoResponse
-
-    /**
-     * [공공데이터포털] 역 편의시설 정보 (엘리베이터, 화장실 등)
-     * BaseUrl: http://apis.data.go.kr/
-     */
-    @GET("api/facility/info/{stationName}") // 실제 API 명세에 따라 수정 필요
-    suspend fun getStationFacilityInfo(@Path("stationName") stationName: String): FacilityInfoResponse
-
     /** [공공데이터포털] TAGO 지하철 정보 – 역 목록 조회 (역명으로 ID 찾기) */
     @GET("1613000/SubwayInfoService/getKwrdFndSubwaySttnList")
     suspend fun getTagoStationList(
