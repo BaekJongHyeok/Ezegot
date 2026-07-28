@@ -31,9 +31,10 @@
             </intent-filter>
         </activity>
 
+        <!-- 키 값은 local.properties의 MAPS_API_KEY에서 주입된다 (app/build.gradle.kts 참고) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCqAGNDGD3h3HHFiXjGH-XCcQW8SodJylc" />
+            android:value="${MAPS_API_KEY}" />
 
         <!-- Home Screen Widget -->
         <receiver

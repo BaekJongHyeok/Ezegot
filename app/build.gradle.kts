@@ -42,6 +42,11 @@ android {
         buildConfigField("String", "TAIMS_API_KEY", "\"${apiKey("TAIMS_API_KEY")}\"")
         // 공공데이터포털 TAGO – 시간표 폴백
         buildConfigField("String", "DATA_GO_KR_SERVICE_KEY", "\"${apiKey("DATA_GO_KR_SERVICE_KEY")}\"")
+
+        // Google Maps – AndroidManifest의 ${MAPS_API_KEY} 자리에 주입된다.
+        // BuildConfig가 아니라 매니페스트 플레이스홀더인 이유는, 지도 SDK가
+        // 매니페스트 meta-data에서 키를 직접 읽기 때문이다.
+        manifestPlaceholders["MAPS_API_KEY"] = apiKey("MAPS_API_KEY")
     }
 
     buildTypes {

@@ -4,6 +4,7 @@ import android.location.Geocoder
 import com.jonghyeok.ezegot.MyApplication
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.api.SubwayApiService
+import com.jonghyeok.ezegot.di.ApiKeys
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,9 +24,7 @@ class StationRepository @Inject constructor(
     @Named("realtimeArrivalApi") private val realtimeApi: SubwayApiService,
     @Named("extendedApi") private val extendedApi: SubwayApiService,
     @Named("stationInfoApi") private val stationInfoApi: SubwayApiService,
-    @Named("seoulOpenApiKey") private val seoulOpenApiKey: String,
-    @Named("seoulTimetableApiKey") private val seoulTimetableApiKey: String,
-    @Named("dataGoKrServiceKey") private val dataGoKrServiceKey: String,
+    private val apiKeys: ApiKeys,
     private val mainRepository: MainRepository  // 위치 목록 캐시 공유
 ) {
     private val arrivalCache = mutableMapOf<String, Pair<Long, List<RealtimeArrival>>>()
@@ -55,7 +54,7 @@ class StationRepository @Inject constructor(
 
         return runCatching {
             withContext(Dispatchers.IO) { 
-                val response = realtimeApi.getStationArrivalInfo(seoulOpenApiKey, normalizedName)
+                val response = realtimeApi.getStationArrivalInfo(apiKeys.seoulOpen, normalizedName)
                 
                 // 에러 코드 337 (일일 호출량 초과) 등 서버 에러 시 예외 발생 유도
                 val code = response.arrivalResult.status
@@ -114,7 +113,7 @@ class StationRepository @Inject constructor(
     /** 첫차 / 막차 조회를 위한 시간표 가져오기 (상/하행 모두 반환) */
     suspend fun getStationTimeTable(stationName: String, lineNumber: String, isWeekend: Boolean): Pair<com.jonghyeok.ezegot.api.TimeTableResponse?, com.jonghyeok.ezegot.api.TimeTableResponse?> =
         withContext(Dispatchers.IO) {
-            val stationsResponse = runCatching { stationInfoApi.getStations(seoulOpenApiKey) }.getOrNull()
+            val stationsResponse = runCatching { stationInfoApi.getStations(apiKeys.seoulOpen) }.getOrNull()
             val cleanName = stationName.replace("역", "")
             val numValue = lineNumber.filter { it.isDigit() }.let { if (it.isEmpty()) lineNumber else it }
 
@@ -132,8 +131,8 @@ class StationRepository @Inject constructor(
 
             if (!frCode.isNullOrEmpty()) {
                 val weekCode = if (isWeekend) "2" else "1"
-                up = runCatching { stationInfoApi.getStationTimeTable(seoulTimetableApiKey, frCode, weekCode, "1") }.getOrNull()
-                down = runCatching { stationInfoApi.getStationTimeTable(seoulTimetableApiKey, frCode, weekCode, "2") }.getOrNull()
+                up = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "1") }.getOrNull()
+                down = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "2") }.getOrNull()
 
                 // DEBUG
                 up?.schedules?.take(3)?.forEach { s ->
@@ -146,7 +145,7 @@ class StationRepository @Inject constructor(
 
             // ── TAGO API Fallback (코레일/전국 역, 또는 서울 API 데이터 없을 때) ─
             if (upEmpty && downEmpty) {
-                val tagoListRes = runCatching { extendedApi.getTagoStationList(dataGoKrServiceKey, cleanName) }.getOrNull()
+                val tagoListRes = runCatching { extendedApi.getTagoStationList(apiKeys.tago, cleanName) }.getOrNull()
                 var nodeId: String? = null
 
                 tagoListRes?.body()?.let { json ->
@@ -180,8 +179,8 @@ class StationRepository @Inject constructor(
                         java.util.Calendar.SUNDAY   -> "03"
                         else                         -> "01"
                     }
-                    val tagoUp   = fetchTagoTimeTable(nodeId!!, tagoDayCode, "U", dataGoKrServiceKey, extendedApi)
-                    val tagoDown = fetchTagoTimeTable(nodeId!!, tagoDayCode, "D", dataGoKrServiceKey, extendedApi)
+                    val tagoUp   = fetchTagoTimeTable(nodeId!!, tagoDayCode, "U", apiKeys.tago, extendedApi)
+                    val tagoDown = fetchTagoTimeTable(nodeId!!, tagoDayCode, "D", apiKeys.tago, extendedApi)
                     return@withContext Pair(tagoUp, tagoDown)
                 }
             }
