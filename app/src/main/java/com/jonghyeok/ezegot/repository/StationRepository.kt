@@ -133,11 +133,6 @@ class StationRepository @Inject constructor(
                 val weekCode = if (isWeekend) "2" else "1"
                 up = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "1") }.getOrNull()
                 down = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "2") }.getOrNull()
-
-                // DEBUG
-                up?.schedules?.take(3)?.forEach { s ->
-                    android.util.Log.d("TimetableDebug", "[Seoul API] leftTime=${s.leftTime}, dest=${s.destination}, express='${s.express}'")
-                }
             }
 
             val upEmpty = up == null || up.schedules.isEmpty()
@@ -214,7 +209,6 @@ class StationRepository @Inject constructor(
                     
                     // 급행 판단 로직 (TAGO API에서 G 등 특정 값으로 내려줄 수 있음, 없다면 "" 할당)
                     val expressVal = obj.get("exprnYn")?.asString ?: obj.get("expressYn")?.asString ?: ""
-                    android.util.Log.d("TimetableDebug", "[TAGO API] depTime=$depTime, exprnYn raw='$expressVal'")
                     val isExpress = if (expressVal.equals("Y", ignoreCase = true)) "Y" else ""
 
                     schedules.add(com.jonghyeok.ezegot.api.TimeTableSchedule(leftTime = formattedTime, destination = dest, express = isExpress))
