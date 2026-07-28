@@ -2,6 +2,7 @@ package com.jonghyeok.ezegot.di
 
 import android.content.Context
 import androidx.room.Room
+import com.jonghyeok.ezegot.BuildConfig
 import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.db.AppDatabase
 import com.jonghyeok.ezegot.db.FavoriteStationDao
@@ -23,6 +24,34 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    // ─── API 키 ───────────────────────────────────────────────────────────────
+    // 실제 값은 local.properties → BuildConfig 경로로 들어온다.
+    // BuildConfig를 참조하는 곳을 이 모듈로 한정해, Repository는 키를 주입만 받는다.
+
+    /** 서울 열린데이터광장 – 전체 역 목록, 실시간 도착 정보 */
+    @Provides
+    @Singleton
+    @Named("seoulOpenApiKey")
+    fun provideSeoulOpenApiKey(): String = BuildConfig.SEOUL_OPEN_API_KEY
+
+    /** 서울 열린데이터광장 – 역별 시간표 */
+    @Provides
+    @Singleton
+    @Named("seoulTimetableApiKey")
+    fun provideSeoulTimetableApiKey(): String = BuildConfig.SEOUL_TIMETABLE_API_KEY
+
+    /** 서울 교통 데이터(t-data) – 역 위경도 */
+    @Provides
+    @Singleton
+    @Named("taimsApiKey")
+    fun provideTaimsApiKey(): String = BuildConfig.TAIMS_API_KEY
+
+    /** 공공데이터포털 TAGO – 시간표 폴백 */
+    @Provides
+    @Singleton
+    @Named("dataGoKrServiceKey")
+    fun provideDataGoKrServiceKey(): String = BuildConfig.DATA_GO_KR_SERVICE_KEY
 
     // ─── OkHttp ───────────────────────────────────────────────────────────────
     @Provides
