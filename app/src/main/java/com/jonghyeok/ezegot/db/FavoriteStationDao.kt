@@ -12,9 +12,6 @@ interface FavoriteStationDao {
     @Query("SELECT * FROM favorite_stations")
     suspend fun getAllSync(): List<FavoriteStationEntity>
 
-    @Query("SELECT * FROM favorite_stations WHERE stationName = :name AND lineNumber = :line LIMIT 1")
-    suspend fun findOne(name: String, line: String): FavoriteStationEntity?
-
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(entity: FavoriteStationEntity)
 

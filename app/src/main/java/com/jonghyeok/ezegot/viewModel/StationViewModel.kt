@@ -1,9 +1,7 @@
 package com.jonghyeok.ezegot.viewModel
 
-import android.location.Geocoder
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
-import com.jonghyeok.ezegot.MyApplication
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
@@ -87,9 +85,6 @@ class StationViewModel @Inject constructor(
     private val _timeTable = MutableStateFlow<Pair<com.jonghyeok.ezegot.api.TimeTableResponse?, com.jonghyeok.ezegot.api.TimeTableResponse?>?>(null)
     val timeTable: StateFlow<Pair<com.jonghyeok.ezegot.api.TimeTableResponse?, com.jonghyeok.ezegot.api.TimeTableResponse?>?> = _timeTable.asStateFlow()
 
-    private val _transferInfo = MutableStateFlow<com.jonghyeok.ezegot.api.TransferInfoResponse?>(null)
-    val transferInfo: StateFlow<com.jonghyeok.ezegot.api.TransferInfoResponse?> = _transferInfo.asStateFlow()
-
     private val _facilityInfo = MutableStateFlow<com.jonghyeok.ezegot.api.FacilityInfoResponse?>(null)
     val facilityInfo: StateFlow<com.jonghyeok.ezegot.api.FacilityInfoResponse?> = _facilityInfo.asStateFlow()
 
@@ -155,9 +150,6 @@ class StationViewModel @Inject constructor(
                 val day = c.get(java.util.Calendar.DAY_OF_WEEK)
                 val isWeekend = day == java.util.Calendar.SATURDAY || day == java.util.Calendar.SUNDAY
                 _timeTable.value = stationRepository.getStationTimeTable(stationName, lineNumber, isWeekend)
-            }
-            launch {
-                _transferInfo.value = stationRepository.getFastTransferInfo(stationName)
             }
             launch {
                 _facilityInfo.value = stationRepository.getStationFacilityInfo(stationName)
