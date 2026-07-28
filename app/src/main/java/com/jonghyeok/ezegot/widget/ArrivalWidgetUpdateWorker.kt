@@ -1,49 +1,53 @@
 package com.jonghyeok.ezegot.widget
 
 import android.content.Context
-import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.jonghyeok.ezegot.BuildConfig
 import com.jonghyeok.ezegot.api.SubwayApiService
-import com.jonghyeok.ezegot.db.AppDatabase
+import com.jonghyeok.ezegot.db.FavoriteStationDao
+import com.jonghyeok.ezegot.di.ApiKeys
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.simplexml.SimpleXmlConverterFactory
+import javax.inject.Named
 
-class ArrivalWidgetUpdateWorker(
-    private val context: Context,
-    params: WorkerParameters
-) : CoroutineWorker(context, params) {
+/**
+ * 위젯의 실시간 도착 정보를 갱신하는 Worker.
+ *
+ * 즐겨찾기 변경 시 즉시 1회, 그리고 15분 주기로 실행된다
+ * ([ArrivalWidgetReceiver] 참고).
+ */
+@HiltWorker
+class ArrivalWidgetUpdateWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted params: WorkerParameters,
+    private val favoriteDao: FavoriteStationDao,
+    @Named("realtimeArrivalApi") private val realtimeApi: SubwayApiService,
+    private val apiKeys: ApiKeys
+) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
         return try {
-            // 1. Room DB에서 즐겨찾기 목록 조회 (Hilt 없이 직접 인스턴스화)
-            val db = AppDatabase.getDatabase(context)
-            val favorites = db.favoriteStationDao().getAllSync()
+            val favorites = favoriteDao.getAllSync()
 
             if (favorites.isEmpty()) {
                 // 즐겨찾기 없으면 빈 상태로 위젯 갱신
-                ArrivalWidget.updateWidgets(context, emptyList())
+                ArrivalWidget.updateWidgets(applicationContext, emptyList())
                 return Result.success()
             }
 
-            // 2. Retrofit 직접 생성
-            val api = buildRealtimeApi()
-
-            // 3. 각 즐겨찾기 역의 실시간 도착 정보를 병렬 호출
+            // 각 즐겨찾기 역의 실시간 도착 정보를 병렬 호출
             val results: List<FavoriteArrivalInfo> = withContext(Dispatchers.IO) {
                 favorites.map { fav ->
                     async {
                         val arrivals = runCatching {
-                            api.getStationArrivalInfo(
-                                BuildConfig.SEOUL_OPEN_API_KEY,
+                            realtimeApi.getStationArrivalInfo(
+                                apiKeys.seoulOpen,
                                 fav.stationName
                             ).arrivals
                         }.getOrDefault(emptyList())
@@ -52,25 +56,11 @@ class ArrivalWidgetUpdateWorker(
                 }.awaitAll()
             }
 
-            // 4. Glance 위젯 갱신
-            ArrivalWidget.updateWidgets(context, results)
+            ArrivalWidget.updateWidgets(applicationContext, results)
             Result.success()
         } catch (e: Exception) {
             Result.retry()
         }
-    }
-
-    private fun buildRealtimeApi(): SubwayApiService {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.NONE
-        }
-        val okHttp = OkHttpClient.Builder().addInterceptor(logging).build()
-        return Retrofit.Builder()
-            .baseUrl("http://swopenapi.seoul.go.kr/")
-            .client(okHttp)
-            .addConverterFactory(SimpleXmlConverterFactory.create())
-            .build()
-            .create(SubwayApiService::class.java)
     }
 }
 
