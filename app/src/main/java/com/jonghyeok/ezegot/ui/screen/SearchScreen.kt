@@ -132,17 +132,19 @@ fun SearchScreen(
                             )
                         }
                         if (textState.text.isNotEmpty()) {
+                            // 터치 영역은 IconButton 기본값(48dp)을 그대로 두고 아이콘만 줄인다.
+                            // Modifier.size()를 주면 최소 터치 크기가 함께 무효화된다.
                             IconButton(
                                 onClick = {
                                     viewModel.onTextChange(TextFieldValue(""))
                                     // debounce가 빈 쿼리를 처리 → filteredStations 초기화
-                                },
-                                modifier = Modifier.size(20.dp)
+                                }
                             ) {
                                 Icon(
                                     Icons.Default.Close,
                                     contentDescription = "지우기",
-                                    tint = TextOnDark.copy(alpha = 0.6f)   // Navy700 배경
+                                    tint = TextOnDark.copy(alpha = 0.6f),   // Navy700 배경
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -274,7 +276,8 @@ fun RecentSearchList(
                             )
                         }
                     }
-                    IconButton(onClick = { onDelete(item) }, modifier = Modifier.size(20.dp)) {
+                    // 터치 영역은 IconButton 기본값(48dp) 유지, 아이콘만 16dp
+                    IconButton(onClick = { onDelete(item) }) {
                         Icon(Icons.Default.Close, contentDescription = "삭제", tint = TextHint, modifier = Modifier.size(16.dp))
                     }
                 }

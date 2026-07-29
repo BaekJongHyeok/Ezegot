@@ -185,6 +185,8 @@ internal fun ArrivalCard(
                         )
 
                         if (arrival.trainNumber.isNotEmpty()) {
+                            // 터치 영역은 IconButton 기본값에 맡기고 아이콘만 16dp로 줄인다.
+                            // 다만 이 Row가 height(32.dp)로 고정돼 있어 세로는 32dp로 잘린다.
                             IconButton(
                                 onClick = {
                                     if (isAlarmSet) {
@@ -192,8 +194,7 @@ internal fun ArrivalCard(
                                     } else {
                                         selectedArrivalForAlarm = arrival
                                     }
-                                },
-                                modifier = Modifier.size(24.dp).padding(start = 4.dp)
+                                }
                             ) {
                                 Icon(
                                     imageVector = if (isAlarmSet) Icons.Default.Notifications else Icons.Default.NotificationsNone,

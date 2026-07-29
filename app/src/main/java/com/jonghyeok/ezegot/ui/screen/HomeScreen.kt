@@ -235,11 +235,16 @@ fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Un
                     fontWeight = FontWeight.SemiBold
                 )
                 Row(
-                    modifier = Modifier.clickable {
-                        currentTime = LocalTime.now()
-                        viewModel.loadRealtimeArrival()
-                        rotation += 360f
-                    },
+                    // 텍스트 높이(약 16dp)만으로는 누르기 어려워 최소 48dp를 확보한다
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            currentTime = LocalTime.now()
+                            viewModel.loadRealtimeArrival()
+                            rotation += 360f
+                        }
+                        .defaultMinSize(minHeight = 48.dp)
+                        .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -829,16 +834,21 @@ fun LocationUnavailableCard(onRetry: () -> Unit) {
                     color = TextSecondary
                 )
                 Surface(
-                    modifier = Modifier.clickable { onRetry() },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onRetry() }
+                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),
                     shape = RoundedCornerShape(8.dp),
                     color = SkyBlue400
                 ) {
-                    Text(
-                        text = "다시 시도",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "다시 시도",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
                 }
             }
         }
