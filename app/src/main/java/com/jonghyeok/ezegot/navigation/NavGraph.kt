@@ -10,7 +10,7 @@ import com.jonghyeok.ezegot.ui.screen.HomeScreen
 import com.jonghyeok.ezegot.ui.screen.MapScreen
 import com.jonghyeok.ezegot.ui.screen.SearchScreen
 import com.jonghyeok.ezegot.ui.screen.SplashScreen
-import com.jonghyeok.ezegot.ui.screen.StationScreen
+import com.jonghyeok.ezegot.ui.screen.station.StationScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
