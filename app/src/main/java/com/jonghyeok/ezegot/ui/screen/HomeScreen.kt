@@ -49,6 +49,7 @@ import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.dto.FavoriteStation
 import com.jonghyeok.ezegot.dto.NearbyStation
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.dto.directionPairFor
 import com.jonghyeok.ezegot.dto.matchesDirection
 import com.jonghyeok.ezegot.ui.theme.EzegotWordmark
 import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
@@ -201,7 +202,7 @@ private fun FavoriteCarousel(
             val favorite = favorites[page]
             FavoriteCarouselCard(
                 favorite = favorite,
-                arrivals = arrivalMap.arrivalsFor(favorite),
+                arrivals = arrivalMap.directionalArrivals(favorite),
                 onClick = { onStationClick(favorite.stationName, favorite.lineNumber) }
             )
         }
@@ -221,7 +222,7 @@ private fun FavoriteCarousel(
 @Composable
 private fun FavoriteCarouselCard(
     favorite: FavoriteStation,
-    arrivals: List<RealtimeArrival>,
+    arrivals: List<Pair<String, RealtimeArrival>>,
     onClick: () -> Unit
 ) {
     val lineColor = getSubwayLineColor(favorite.lineNumber)
@@ -253,15 +254,11 @@ private fun FavoriteCarouselCard(
             )
             Spacer(Modifier.width(6.dp))
             TranslucentChip(text = favorite.lineNumber.removePrefix("0"), onLine = onLine)
-            Spacer(Modifier.width(4.dp))
-            // 같은 역이라도 방향마다 카드가 따로 있으므로, 어느 쪽인지 카드에서 바로 보여야 한다
-            TranslucentChip(text = favorite.direction, onLine = onLine)
         }
 
-        // 카드 본문 – 그 방향의 다음 열차를 최대 3대까지
+        // 카드 본문 – 방향마다 다음 열차 한 대씩, 최대 2행
         Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-            val shown = arrivals.take(3)
-            if (shown.isEmpty()) {
+            if (arrivals.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -275,18 +272,14 @@ private fun FavoriteCarouselCard(
                     )
                 }
             } else {
-                shown.forEachIndexed { index, arrival ->
+                arrivals.forEachIndexed { index, (direction, arrival) ->
                     if (index > 0) {
                         HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                     }
-                    // 한 카드가 한 방향이라 행선지가 대체로 같다.
-                    // 매 행에 "성수행"을 반복하면 시선만 잡아먹으므로 첫 행에만 둔다.
-                    // 다만 종착이 달라지는 열차(지선 종착 등)는 그대로 보여준다.
-                    val previous = shown.getOrNull(index - 1)
                     CarouselArrivalRow(
+                        direction = direction,
                         arrival = arrival,
-                        isFirst = index == 0,
-                        showDestination = index == 0 || arrival.bstatnNm != previous?.bstatnNm
+                        isFirst = index == 0
                     )
                 }
             }
@@ -314,18 +307,20 @@ private fun TranslucentChip(text: String, onLine: androidx.compose.ui.graphics.C
 
 @Composable
 private fun CarouselArrivalRow(
+    direction: String,
     arrival: RealtimeArrival,
-    isFirst: Boolean,
-    showDestination: Boolean
+    isFirst: Boolean
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = if (isFirst) 9.dp else 7.dp),
+            .padding(horizontal = 12.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 두 행이 서로 다른 방향이므로 방향을 앞에 둔다.
+        // 행선지만 있으면 2호선처럼 양방향이 모두 "성수행"인 노선에서 구분되지 않는다.
         Text(
-            text = if (showDestination) "${arrival.bstatnNm}행" else "",
+            text = "$direction · ${arrival.bstatnNm}행",
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -333,7 +328,8 @@ private fun CarouselArrivalRow(
             modifier = Modifier.weight(1f)
         )
         Spacer(Modifier.width(6.dp))
-        ArrivalTime(arrival = arrival, fontSize = if (isFirst) 26.sp else 15.sp)
+        // 두 방향은 대등하다. 위쪽만 크게 하면 상행이 더 중요해 보인다
+        ArrivalTime(arrival = arrival, fontSize = 20.sp)
     }
 }
 
@@ -467,7 +463,7 @@ private fun OverflowFavoriteSection(
             }
             OverflowFavoriteRow(
                 favorite = favorite,
-                arrivals = arrivalMap.arrivalsFor(favorite),
+                arrivals = arrivalMap.directionalArrivals(favorite),
                 onClick = { onStationClick(favorite.stationName, favorite.lineNumber) }
             )
         }
@@ -477,11 +473,10 @@ private fun OverflowFavoriteSection(
 @Composable
 private fun OverflowFavoriteRow(
     favorite: FavoriteStation,
-    arrivals: List<RealtimeArrival>,
+    arrivals: List<Pair<String, RealtimeArrival>>,
     onClick: () -> Unit
 ) {
     val lineColor = getSubwayLineColor(favorite.lineNumber)
-    val first = arrivals.firstOrNull()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -491,37 +486,39 @@ private fun OverflowFavoriteRow(
     ) {
         LineSquareBadge(lineName = favorite.lineNumber, lineColor = lineColor)
         Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = favorite.stationName,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(1.dp))
-            Text(
-                text = favorite.direction,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (first != null) {
-            Column(horizontalAlignment = Alignment.End) {
-                ArrivalTime(arrival = first, fontSize = 15.sp)
-                Text(
-                    text = "${first.bstatnNm}행",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
-        } else {
+        Text(
+            text = favorite.stationName,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(Modifier.width(8.dp))
+        if (arrivals.isEmpty()) {
             Text(
                 text = "정보 없음",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                 color = MaterialTheme.colorScheme.tertiary
             )
+        } else {
+            // 역 단위라 한 행이 두 방향을 함께 보여준다.
+            // 방향 라벨은 왼쪽, 시간은 오른쪽으로 맞춰 두 줄의 열이 흔들리지 않게 한다.
+            Column(horizontalAlignment = Alignment.End) {
+                arrivals.forEachIndexed { index, (direction, arrival) ->
+                    if (index > 0) Spacer(Modifier.height(3.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "$direction · ${arrival.bstatnNm}행",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        ArrivalTime(arrival = arrival, fontSize = 15.sp)
+                    }
+                }
+            }
         }
     }
 }
@@ -642,15 +639,26 @@ private fun ArrivalTime(
     }
 }
 
-/** 이 즐겨찾기(역 + 방향)에 해당하는 도착만 남긴다 */
-private fun Map<String, List<RealtimeArrival>>.arrivalsFor(favorite: FavoriteStation): List<RealtimeArrival> {
+/**
+ * 이 역의 방향별 다음 열차 한 대씩.
+ *
+ * 즐겨찾기가 역 단위가 되면서 한 항목이 두 방향을 함께 보여준다.
+ * 방향마다 가장 빠른 한 대만 남긴다 — 카드가 두 줄을 넘기면
+ * 캐러셀 높이가 역마다 달라진다.
+ *
+ * 반환 순서는 [directionPairFor]가 주는 순서(상행→하행 / 내선→외선)를 따른다.
+ * 도착 시각순으로 정렬하면 갱신할 때마다 두 줄이 자리를 바꿔 읽기 어렵다.
+ */
+private fun Map<String, List<RealtimeArrival>>.directionalArrivals(
+    favorite: FavoriteStation
+): List<Pair<String, RealtimeArrival>> {
     val lineId = SubwayLine.getLineId(favorite.lineNumber)
-    // 종착역으로 중복을 지우면 안 된다. 2호선 내선은 다음 두 대가 모두 "성수행"이라
-    // 열차가 2대 와도 1대만 남아 카드가 비어 보였다.
-    return (this[favorite.stationName] ?: emptyList())
-        .filter {
-            it.subwayId == lineId &&
-                it.updnLine.matchesDirection(favorite.direction) &&
-                it.getFormattedMessage() != "출발"
-        }
+    val arrivals = (this[favorite.stationName] ?: emptyList())
+        .filter { it.subwayId == lineId && it.getFormattedMessage() != "출발" }
+
+    val (first, second) = directionPairFor(favorite.lineNumber)
+    return listOf(first, second).mapNotNull { direction ->
+        arrivals.firstOrNull { it.updnLine.matchesDirection(direction) }
+            ?.let { direction to it }
+    }
 }

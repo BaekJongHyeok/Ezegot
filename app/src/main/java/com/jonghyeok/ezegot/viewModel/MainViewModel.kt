@@ -35,7 +35,7 @@ class MainViewModel @Inject constructor(
     private val locationRepository: LocationRepository
 ) : ViewModel() {
 
-    // ── 즐겨찾기 (방향 단위) ─────────────────────────────────────
+    // ── 즐겨찾기 (역 단위) ───────────────────────────────────────
     val favoriteStationList: StateFlow<List<FavoriteStation>> = favoriteRepository.favorites
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -115,8 +115,8 @@ class MainViewModel @Inject constructor(
     private fun observeFavoritesForAutoRefresh() {
         viewModelScope.launch {
             favoriteStationList
-                // 실시간 API는 역 단위라, 같은 역의 두 방향을 담았어도 한 번만 부른다.
-                // 일일 1,000건 제한이 있어 중복 호출을 그대로 두면 안 된다.
+                // 실시간 API는 역 이름으로 부른다. 환승역을 두 노선으로 담아도
+                // 한 번만 부른다. 일일 1,000건 제한이 있어 중복 호출을 두면 안 된다.
                 .map { list -> list.map { it.stationName }.distinct() }
                 .distinctUntilChanged()
                 .collect { names ->

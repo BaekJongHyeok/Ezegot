@@ -78,9 +78,8 @@ class StationViewModel @Inject constructor(
         val info = BasicStationInfo(stationName, line)
         _uiState.update { it.copy(stationInfo = info) }
         viewModelScope.launch {
-            // 즐겨찾기는 방향 단위라, 이 역에서 담아둔 방향 집합을 구독한다
-            favoriteRepository.directionsOf(stationName, line).collect { directions ->
-                _uiState.update { it.copy(favoriteDirections = directions.toSet()) }
+            favoriteRepository.isFavorite(stationName, line).collect { favorite ->
+                _uiState.update { it.copy(isFavorite = favorite) }
             }
         }
     }
@@ -94,15 +93,15 @@ class StationViewModel @Inject constructor(
     }
 
     /**
-     * 한 방향의 즐겨찾기를 토글한다.
+     * 이 역의 즐겨찾기를 토글한다.
      *
      * 상태는 Room Flow가 다시 흘려주므로 여기서 직접 갱신하지 않는다.
      */
-    fun toggleFavoriteDirection(direction: String) {
+    fun toggleFavorite() {
         val station = _uiState.value.stationInfo ?: return
-        val favorite = FavoriteStation(station.stationName, station.lineNumber, direction)
+        val favorite = FavoriteStation(station.stationName, station.lineNumber)
         viewModelScope.launch {
-            if (direction in _uiState.value.favoriteDirections) {
+            if (_uiState.value.isFavorite) {
                 favoriteRepository.removeFavorite(favorite)
             } else {
                 favoriteRepository.addFavorite(favorite)

@@ -57,7 +57,7 @@ internal fun StationHeader(
     stationName: String,
     lineNumber: String,
     colors: SubwayHeaderColors,
-    isAnyDirectionFavorite: Boolean,
+    isFavorite: Boolean,
     transferLines: List<String>,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
@@ -87,8 +87,8 @@ internal fun StationHeader(
             Spacer(Modifier.weight(1f))
             IconButton(onClick = onToggleFavorite) {
                 Icon(
-                    imageVector = if (isAnyDirectionFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                    contentDescription = if (isAnyDirectionFavorite) "즐겨찾기 해제" else "즐겨찾기 추가",
+                    imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                    contentDescription = if (isFavorite) "즐겨찾기 해제" else "즐겨찾기 추가",
                     tint = onLine
                 )
             }

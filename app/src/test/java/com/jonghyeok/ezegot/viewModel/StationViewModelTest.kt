@@ -101,34 +101,35 @@ class StationViewModelTest {
     }
 
     @Test
-    fun `담지 않은 방향을 토글하면 그 방향이 저장된다`() = runTest {
-        // given: 아직 아무 방향도 담지 않은 역
-        every { favoriteRepository.directionsOf(any(), any()) } returns flowOf(emptyList())
-        val viewModel = createViewModel()
-        viewModel.loadStationInfo("강남", "2호선")
-
-        // when: 2호선은 상하행 대신 내선/외선을 쓴다
-        viewModel.toggleFavoriteDirection("내선")
-
-        // then
-        coVerify(exactly = 1) {
-            favoriteRepository.addFavorite(FavoriteStation("강남", "2호선", "내선"))
-        }
-    }
-
-    @Test
-    fun `이미 담은 방향을 토글하면 그 방향만 삭제된다`() = runTest {
-        // given: 내선만 담아둔 상태
-        every { favoriteRepository.directionsOf(any(), any()) } returns flowOf(listOf("내선"))
+    fun `담지 않은 역을 토글하면 저장된다`() = runTest {
+        // given: 아직 담지 않은 역
+        every { favoriteRepository.isFavorite(any(), any()) } returns flowOf(false)
         val viewModel = createViewModel()
         viewModel.loadStationInfo("강남", "2호선")
 
         // when
-        viewModel.toggleFavoriteDirection("내선")
+        viewModel.toggleFavorite()
 
-        // then: 외선은 건드리지 않는다
+        // then: 방향은 저장 단위가 아니므로 역과 노선만 넘어간다
         coVerify(exactly = 1) {
-            favoriteRepository.removeFavorite(FavoriteStation("강남", "2호선", "내선"))
+            favoriteRepository.addFavorite(FavoriteStation("강남", "2호선"))
+        }
+        coVerify(exactly = 0) { favoriteRepository.removeFavorite(any()) }
+    }
+
+    @Test
+    fun `이미 담은 역을 토글하면 삭제된다`() = runTest {
+        // given: 이미 담아둔 역
+        every { favoriteRepository.isFavorite(any(), any()) } returns flowOf(true)
+        val viewModel = createViewModel()
+        viewModel.loadStationInfo("강남", "2호선")
+
+        // when
+        viewModel.toggleFavorite()
+
+        // then
+        coVerify(exactly = 1) {
+            favoriteRepository.removeFavorite(FavoriteStation("강남", "2호선"))
         }
         coVerify(exactly = 0) { favoriteRepository.addFavorite(any()) }
     }

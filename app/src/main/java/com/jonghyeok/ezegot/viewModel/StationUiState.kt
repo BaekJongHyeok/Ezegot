@@ -33,7 +33,7 @@ data class StationUiState(
      *
      * 즐겨찾기 단위가 역이 아니라 방향이라 Boolean 하나로는 표현할 수 없다.
      */
-    val favoriteDirections: Set<String> = emptySet(),
+    val isFavorite: Boolean = false,
     val isNotification: Boolean = false,
     val activeAlarms: List<SubwayAlarmEntity> = emptyList(),
 

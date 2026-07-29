@@ -1,25 +1,25 @@
 package com.jonghyeok.ezegot.dto
 
 /**
- * 방향까지 포함한 즐겨찾기 한 건.
+ * 즐겨찾기 한 건. 역이 단위다.
  *
- * 대부분의 사용자는 한 방향만 필요하다. 역 단위로 담으면 쓰지 않는 방향이
- * 항상 함께 나오므로 방향을 저장 단위에 넣었다.
+ * 방향은 저장하지 않는다. 한동안 방향까지 넣었더니 같은 역의 반대 방향이
+ * 별도 항목이 되어 목록에 역 이름이 두 번씩 나왔다.
+ * 화면에서 한 항목 안에 두 방향을 나란히 보여주면 될 일이다.
  *
- * [direction]은 실시간 API의 `updnLine` 값을 그대로 쓴다.
- * 화면에 보이는 "교대 방면" 같은 라벨은 열차마다 달라져서 저장하면 낡는다.
- * 라벨은 저장하지 않고 도착 정보에서 런타임에 만든다.
+ * 화면에 보이는 "교대 방면" 같은 라벨도 저장하지 않는다.
+ * 열차마다 달라져서 저장하면 낡는다. 도착 정보에서 런타임에 만든다.
  */
 data class FavoriteStation(
     val stationName: String,
-    val lineNumber: String,
-    val direction: String
+    val lineNumber: String
 )
 
 /**
  * 노선이 쓰는 방향 표기 쌍.
  *
  * 2호선은 순환선이라 상하행 대신 내선/외선이 온다.
+ * 저장 단위는 아니지만, 한 역의 도착 정보를 방향별로 가르는 데는 여전히 필요하다.
  */
 fun directionPairFor(lineNumber: String): Pair<String, String> =
     if (lineNumber.contains("2호선")) INNER to OUTER else UP to DOWN

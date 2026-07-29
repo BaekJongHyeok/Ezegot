@@ -216,10 +216,10 @@ fun StationScreen(
             stationName = stationName,
             lineNumber = lineNumber,
             colors = headerColors,
-            isAnyDirectionFavorite = uiState.favoriteDirections.isNotEmpty(),
+            isFavorite = uiState.isFavorite,
             transferLines = transferLines,
             onBack = onBack,
-            onToggleFavorite = { viewModel.toggleFavoriteDirection(upDirection) },
+            onToggleFavorite = { viewModel.toggleFavorite() },
             onCall = { context.dial() },
             onShare = { context.shareStation(stationName, lineNumber, uiState.stationLocation?.address) },
             onTransferClick = { name -> onStationClick(stationName, name) }

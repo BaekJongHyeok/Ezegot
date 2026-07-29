@@ -15,13 +15,13 @@ interface FavoriteStationDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(entity: FavoriteStationEntity)
 
-    @Query("DELETE FROM favorite_stations WHERE stationName = :name AND lineNumber = :line AND direction = :direction")
-    suspend fun delete(name: String, line: String, direction: String)
+    @Query("DELETE FROM favorite_stations WHERE stationName = :name AND lineNumber = :line")
+    suspend fun delete(name: String, line: String)
 
-    @Query("SELECT EXISTS(SELECT 1 FROM favorite_stations WHERE stationName = :name AND lineNumber = :line AND direction = :direction)")
-    suspend fun exists(name: String, line: String, direction: String): Boolean
+    @Query("SELECT EXISTS(SELECT 1 FROM favorite_stations WHERE stationName = :name AND lineNumber = :line)")
+    suspend fun exists(name: String, line: String): Boolean
 
-    /** 이 역·노선에서 담아둔 방향들. 역 상세가 방향별 별 상태를 그릴 때 쓴다. */
-    @Query("SELECT direction FROM favorite_stations WHERE stationName = :name AND lineNumber = :line")
-    fun directionsOf(name: String, line: String): Flow<List<String>>
+    /** 이 역·노선을 담아뒀는지. 역 상세가 별 상태를 그릴 때 쓴다. */
+    @Query("SELECT EXISTS(SELECT 1 FROM favorite_stations WHERE stationName = :name AND lineNumber = :line)")
+    fun isFavorite(name: String, line: String): Flow<Boolean>
 }
