@@ -56,12 +56,12 @@ fun StationScreen(
 ) {
     val context = LocalContext.current
     val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
-    val stationInfo by viewModel.stationInfo.collectAsState()
-    val arrivalInfo by viewModel.arrivalInfo.collectAsState()
-    val isFavorite by viewModel.isFavorite.collectAsState()
-    val isNotification by viewModel.isNotification.collectAsState()
-    val stationLocation by viewModel.stationLocation.collectAsState()
-    val activeAlarms by viewModel.activeAlarms.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+
+    val stationInfo = uiState.stationInfo
+    val arrivalInfo = uiState.arrivals
+    val isFavorite = uiState.isFavorite
+    val stationLocation = uiState.stationLocation
 
     var showPermissionRationale by remember { mutableStateOf(false) }
     var pendingAlarmArrival by remember { mutableStateOf<RealtimeArrival?>(null) }
@@ -112,7 +112,7 @@ fun StationScreen(
         )
     }
 
-    val timeTable by viewModel.timeTable.collectAsState()
+    val timeTable = uiState.timetable
 
     LaunchedEffect(stationLocation) {
         stationLocation?.let {
@@ -178,7 +178,7 @@ fun StationScreen(
                         upDt = upDtLabel,
                         dnDt = dnDtLabel,
                         timeTable = timeTable,
-                        activeAlarms = activeAlarms,
+                        activeAlarms = uiState.activeAlarms,
                         onSetAlarm = { arr, threshold ->
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 when {
@@ -219,7 +219,7 @@ fun StationScreen(
             // 액션 버튼바를 위에 띄워서 오버랩 시킴 (공백 제거 효과)
             StationActionBar(
                 isFavorite = isFavorite,
-                isNotification = isNotification,
+                isNotification = uiState.isNotification,
                 viewModel = viewModel,
                 stationInfo = stationInfo?.let { BasicStationInfo(it.stationName, it.lineNumber) },
                 stationLocation = stationLocation,
