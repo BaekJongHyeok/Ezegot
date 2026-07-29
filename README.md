@@ -32,8 +32,31 @@ MAPS_API_KEY=발급받은_키
 `DATA_GO_KR_SERVICE_KEY`는 공공데이터포털이 주는 **Encoding 키**를 그대로 넣는다
 (`%2F`, `%2B`, `%3D` 포함). Retrofit이 `encoded = true`로 전달하므로 재인코딩하지 않는다.
 
-`MAPS_API_KEY`는 노출 시 실제 과금이 발생할 수 있다. Google Cloud 콘솔에서
-패키지명과 SHA-1 지문으로 사용 제한을 걸어두는 것을 권장한다.
+## 보안
+
+### API 키 관리
+
+모든 API 키는 저장소에 커밋하지 않는다. 프로젝트 루트의 `local.properties`
+(`.gitignore` 대상)에 두고 `app/build.gradle.kts`가 빌드 시점에 주입한다.
+
+| 대상 | 주입 경로 | 코드에서 읽는 곳 |
+|---|---|---|
+| 공공 API 키 4종 | `local.properties` → `buildConfigField` → `BuildConfig` | `di/AppModule`의 `provideApiKeys()` 한 곳 |
+| `MAPS_API_KEY` | `local.properties` → `manifestPlaceholders` → `AndroidManifest` | 지도 SDK가 매니페스트 `meta-data`에서 직접 읽음 |
+
+`BuildConfig`를 참조하는 코드는 `AppModule` 하나뿐이다. Repository는 키 문자열
+대신 `ApiKeys` 객체를 주입받으므로, 인증 정보가 데이터 계층 시그니처에
+노출되지 않는다.
+
+빌드에 필요한 키 목록과 발급처는 `local.properties.example`에 정리되어 있다.
+키가 비어 있어도 빌드는 통과하며, 해당 기능만 동작하지 않는다.
+
+### 사용 중인 Google API
+
+`MAPS_API_KEY`가 실제로 필요한 것은 **Maps SDK for Android** 하나다.
+위치 조회에 쓰는 `FusedLocationProviderClient`와 주소 변환에 쓰는
+`android.location.Geocoder`는 Android 프레임워크/Play 서비스 API라
+이 키를 사용하지 않는다.
 
 ## 빌드
 
