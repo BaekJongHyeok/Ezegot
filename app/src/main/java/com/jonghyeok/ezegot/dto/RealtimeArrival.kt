@@ -62,6 +62,11 @@ data class RealtimeArrival(
     // 막차여부
     @field:Element(name = "lstcarAt", required = false)
     var lstcarAt: String = "",
+
+    // 이 행이 만들어진 시각 ("2026-07-29 18:53:21").
+    // 급행 계통이 일반보다 5분 가까이 뒤처져 오므로, 떠난 열차를 거르는 데 쓴다.
+    @field:Element(name = "recptnDt", required = false)
+    var receptionTime: String = "",
 ) {
     /**
      * 사용자 친화적인 실시간 도착 메시지 반환 함수.

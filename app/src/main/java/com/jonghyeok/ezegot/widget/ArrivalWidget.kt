@@ -1,5 +1,8 @@
 package com.jonghyeok.ezegot.widget
 
+import com.jonghyeok.ezegot.dto.matchesDirection
+import com.jonghyeok.ezegot.dto.directionPairFor
+import com.jonghyeok.ezegot.util.forDisplay
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
@@ -97,16 +100,13 @@ class ArrivalWidget : GlanceAppWidget() {
                 val lineId = SubwayLine.getLineId(fav.lineNumber)
                 val is2 = fav.lineNumber.contains("2호선")
 
-                val upFirst = fav.arrivals.firstOrNull {
-                    it.subwayId == lineId &&
-                    (it.updnLine == "상행" || it.updnLine == "내선") &&
-                    it.getFormattedMessage() != "출발"
-                }
-                val dnFirst = fav.arrivals.firstOrNull {
-                    it.subwayId == lineId &&
-                    (it.updnLine == "하행" || it.updnLine == "외선") &&
-                    it.getFormattedMessage() != "출발"
-                }
+                // 거르기와 정렬은 앱 화면과 같은 규칙을 쓴다(ArrivalOrdering).
+                // 정렬하지 않으면 API가 급행 계통을 끼워 넣어 가장 빠른 열차가 오지 않는다.
+                val (upDirection, dnDirection) = directionPairFor(fav.lineNumber)
+                val upFirst = fav.arrivals
+                    .forDisplay(lineId) { it.matchesDirection(upDirection) }.firstOrNull()
+                val dnFirst = fav.arrivals
+                    .forDisplay(lineId) { it.matchesDirection(dnDirection) }.firstOrNull()
 
                 WidgetStationEntry(
                     stationName = fav.stationName,

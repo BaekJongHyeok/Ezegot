@@ -1,5 +1,6 @@
 package com.jonghyeok.ezegot.ui.screen.station
 
+import com.jonghyeok.ezegot.util.forDisplay
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -82,16 +83,12 @@ fun StationScreen(
     val lineId = SubwayLine.getLineId(lineNumber)
     val (upDirection, dnDirection) = directionPairFor(lineNumber)
 
-    // 방향별 도착 목록. "출발"한 열차는 이미 떠났으므로 뺀다.
+    // 방향별 도착 목록. 거르기와 정렬은 위젯과 공유한다(ArrivalOrdering).
     //
     // 종착역으로 중복을 지우면 안 된다. 2호선 내선은 다음 두 대가 모두 "성수행"이라
     // 열차가 2대 와도 1대만 남았다. 같은 열차가 두 번 오지는 않으므로 그대로 쓴다.
-    fun arrivalsOf(direction: String) = uiState.arrivals
-        .filter {
-            it.subwayId == lineId &&
-                it.updnLine.matchesDirection(direction) &&
-                it.getFormattedMessage() != "출발"
-        }
+    fun arrivalsOf(direction: String) =
+        uiState.arrivals.forDisplay(lineId) { it.matchesDirection(direction) }
 
     val upArrivals = arrivalsOf(upDirection)
     val dnArrivals = arrivalsOf(dnDirection)
