@@ -37,6 +37,36 @@ private val Pretendard = FontFamily(
 )
 
 /**
+ * 워드마크 전용 패밀리. 700을 갖는 유일한 곳이다.
+ *
+ * 본문은 400/500 두 단계로 제한하지만 로고까지 500이면 타이틀로 읽히지 않고
+ * 그냥 대문자 본문처럼 보인다. 예외를 여기 한 곳에 가둬 두어 호출부가
+ * 임의로 Bold를 쓰지 못하게 한다.
+ */
+@OptIn(ExperimentalTextApi::class)
+private val PretendardWordmark = FontFamily(
+    Font(
+        R.font.pretendard_variable,
+        FontWeight.Bold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(700))
+    )
+)
+
+/**
+ * "EZEGOT" 워드마크.
+ *
+ * letterSpacing은 굵어질수록 좁혀야 한다. 15sp/500에서 1.5sp(0.1em)였는데
+ * 19sp/700에 같은 비율을 주면 글자가 흩어져 보인다. 0.06em으로 낮춘다.
+ */
+val EzegotWordmark = TextStyle(
+    fontFamily = PretendardWordmark,
+    fontWeight = FontWeight.Bold,
+    fontSize = 19.sp,
+    lineHeight = 24.sp,
+    letterSpacing = 1.2.sp
+)
+
+/**
  * 숫자를 고정폭으로 뽑는다.
  *
  * 도착 시간이 매초 바뀌는데 비례폭 숫자를 쓰면 "1분"과 "11분"에서 열이 흔들린다.

@@ -50,6 +50,7 @@ import com.jonghyeok.ezegot.dto.FavoriteStation
 import com.jonghyeok.ezegot.dto.NearbyStation
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.dto.matchesDirection
+import com.jonghyeok.ezegot.ui.theme.EzegotWordmark
 import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
 import com.jonghyeok.ezegot.ui.theme.onSubwayLineColor
 import com.jonghyeok.ezegot.util.ArrivalEmphasis
@@ -132,14 +133,11 @@ private fun HomeHeader(onSearchClick: () -> Unit, onSettingsClick: () -> Unit) {
                 .padding(start = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 웨이트 예외는 Type.kt의 EzegotWordmark 한 곳에만 있다
             Text(
                 text = "EZEGOT",
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontSize = 15.sp,
-                    letterSpacing = 1.5.sp
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Medium
+                style = EzegotWordmark,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.weight(1f))
             IconButton(onClick = onSearchClick) {
