@@ -98,8 +98,14 @@ data class RealtimeArrival(
             return "${estimatedMinutes}분 후"
         }
 
-        // 3. "전역" 이라는 텍스트가 단독으로 올 경우 (1정거장 전)
-        if (rawMessage == "전역") {
+        // 3. "전역"으로 시작하면 한 정거장 전이다 ("전역 도착", "전역 진입", "전역").
+        //
+        // 반드시 아래 endsWith 검사보다 먼저 와야 한다. "전역 도착"은 이전 역에
+        // 도착했다는 뜻인데 endsWith("도착")에 먼저 걸리면 현재 역 도착과 구분되지
+        // 않는다. 그러면 한 정거장(약 3분) 떨어진 열차를 "지금 들어온다"고 알리게 되고,
+        // 인접한 두 역에서 같은 열차의 표시가 뒤집혀 보인다.
+        // 수원·매교·수원시청 동시 수집 62건 중 12건(19%)이 이 경우였다.
+        if (rawMessage.startsWith("전역")) {
             val estimatedMinutes = ArrivalEstimator.estimateMinutesFromStations(this, 1)
             return "${estimatedMinutes}분 후"
         }
