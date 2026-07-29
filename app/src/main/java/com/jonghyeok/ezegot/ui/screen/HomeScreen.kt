@@ -128,13 +128,13 @@ fun StickyHeader(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .height(48.dp)                       // 검색·지도 화면의 검색바와 동일
+                .clip(RoundedCornerShape(12.dp))
                 .clickable(
                     onClickLabel = "검색 화면 열기",
                     role = Role.Button
                 ) { onSearchClick() },
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(12.dp),
             color = Navy700
         ) {
             Row(
@@ -229,7 +229,7 @@ fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Un
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = 16.dp),   // 아래 카드와 좌측 정렬을 맞춘다
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -304,6 +304,7 @@ fun FavoriteArrivalRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(16.dp))   // ripple이 카드 모서리를 따르도록
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         shadowElevation = 3.dp,
@@ -331,7 +332,7 @@ fun FavoriteArrivalRow(
                         Text(
                             text = station.lineNumber.removePrefix("0"),
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
+                            color = TextOnDark,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -633,6 +634,7 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))   // ripple이 카드 모서리를 따르도록
                         .clickable { onStationClick(station.stationName, station.lineNumber) },
                     shape = RoundedCornerShape(16.dp),
                     shadowElevation = 8.dp,
@@ -674,7 +676,7 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                                         Text(
                                             text = station.lineNumber,
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White,
+                                            color = TextOnDark,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
@@ -694,7 +696,7 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                             Text(
                                 text = "상세 정보",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
+                                color = TextOnDark,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                             )
                         }
@@ -718,7 +720,7 @@ fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName:
             modifier = Modifier
                 .size(baseSize)
                 .shadow(if (isSelected) 8.dp else 4.dp, androidx.compose.foundation.shape.CircleShape)
-                .background(Color.White, androidx.compose.foundation.shape.CircleShape)
+                .background(SurfaceWhite, androidx.compose.foundation.shape.CircleShape)
                 .padding(strokeWidth / 2), // Space for stroke
             contentAlignment = Alignment.Center
         ) {
@@ -777,7 +779,7 @@ fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName:
             ) {
                 Text(
                     text = stationName,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    style = MaterialTheme.typography.labelSmall,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
@@ -851,7 +853,7 @@ fun LocationUnavailableCard(onRetry: () -> Unit) {
                         Text(
                             text = "다시 시도",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White,
+                            color = TextOnDark,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
@@ -910,7 +912,7 @@ fun LocationGuideCard(isPermissionGranted: Boolean) {
                     Text(
                         text = "설정으로 이동",
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
+                        color = TextOnDark,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }

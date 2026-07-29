@@ -100,7 +100,7 @@ internal fun StationTopBar(
                         Text(
                             text = lineNumber.removePrefix("0"),
                             style = MaterialTheme.typography.labelLarge,
-                            color = Color.White,
+                            color = TextOnDark,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }

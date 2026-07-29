@@ -28,6 +28,7 @@ import com.jonghyeok.ezegot.db.SubwayAlarmEntity
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.ui.theme.DividerColor
 import com.jonghyeok.ezegot.ui.theme.Navy800
+import com.jonghyeok.ezegot.ui.theme.SurfaceWhite
 import com.jonghyeok.ezegot.ui.theme.TextHint
 import com.jonghyeok.ezegot.ui.theme.TextPrimary
 
@@ -81,7 +82,8 @@ internal fun ArrivalInfoSection(
     Column(modifier = Modifier.fillMaxWidth()) {
         // 섹션 타이틀 + 실시간/시간표 스위치
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+            // 아래 도착 카드(16dp)와 좌측 정렬을 맞춘다
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -103,9 +105,10 @@ internal fun ArrivalInfoSection(
                     onCheckedChange = { isRealtime = !it },
                     modifier = Modifier.padding(horizontal = 6.dp).scale(0.75f),
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        // 썸은 텍스트가 아니라 표면이라 SurfaceWhite를 쓴다 (값은 동일)
+                        checkedThumbColor = SurfaceWhite,
                         checkedTrackColor = Navy800,
-                        uncheckedThumbColor = Color.White,
+                        uncheckedThumbColor = SurfaceWhite,
                         // 텍스트 토큰(TextHint)을 쓰면 꺼짐 트랙이 어두워져 켜짐처럼 보인다
                         uncheckedTrackColor = DividerColor
                     )

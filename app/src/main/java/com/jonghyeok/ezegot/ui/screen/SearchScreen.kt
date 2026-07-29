@@ -211,7 +211,7 @@ fun SearchResultList(stations: List<StationInfo>, onItemClick: (StationInfo) -> 
                     Text(
                         text = station.lineNumber.removePrefix("0"),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
+                        color = TextOnDark,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }

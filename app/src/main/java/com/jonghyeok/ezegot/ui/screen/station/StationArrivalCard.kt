@@ -54,6 +54,7 @@ import com.jonghyeok.ezegot.ui.theme.Navy900
 import com.jonghyeok.ezegot.ui.theme.SkyBlue400
 import com.jonghyeok.ezegot.ui.theme.SurfaceWhite
 import com.jonghyeok.ezegot.ui.theme.TextHint
+import com.jonghyeok.ezegot.ui.theme.TextOnDark
 import com.jonghyeok.ezegot.ui.theme.TextPrimary
 import com.jonghyeok.ezegot.ui.theme.TextSecondary
 
@@ -237,7 +238,7 @@ internal fun ArrivalCard(
                     .clickable { showSheet = true },
                 color = Color.Transparent,
                 shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                border = BorderStroke(1.dp, TextOnDark.copy(alpha = 0.12f)),
                 shadowElevation = 8.dp
             ) {
                 Box(
@@ -255,7 +256,7 @@ internal fun ArrivalCard(
                         Text(
                             text = "시간표 전체보기",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White,
+                            color = TextOnDark,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         )
@@ -264,7 +265,7 @@ internal fun ArrivalCard(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color.White
+                            tint = TextOnDark
                         )
                     }
                 }

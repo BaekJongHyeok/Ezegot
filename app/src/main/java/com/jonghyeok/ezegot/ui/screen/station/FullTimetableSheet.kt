@@ -162,7 +162,7 @@ internal fun FullTimetableSheet(
                             text = "${hour}시",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isCurrent) Color.White else TextPrimary,
+                            color = if (isCurrent) TextOnDark else TextPrimary,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
@@ -213,7 +213,7 @@ internal fun FullTimetableSheet(
                                         Text(
                                             "NOW",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White,
+                                            color = TextOnDark,
                                             fontWeight = FontWeight.ExtraBold,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                         )
@@ -281,7 +281,7 @@ internal fun FullTimetableSheet(
                                                 if (schedule.isExpressTrain()) {
                                                     Text(
                                                         text = "급행",
-                                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                        style = MaterialTheme.typography.labelSmall,
                                                         color = ArrivalRed,
                                                         fontWeight = FontWeight.Bold,
                                                         modifier = Modifier.padding(end = 4.dp)
