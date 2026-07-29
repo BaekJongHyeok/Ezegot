@@ -59,7 +59,6 @@ internal enum class HomeTab(val label: String) { FAVORITE("즐겨찾기"), NEARB
 fun HomeScreen(
     viewModel: MainViewModel = hiltViewModel(),
     onSearchClick: () -> Unit,
-    onMapClick: () -> Unit,
     onStationClick: (String, String) -> Unit
 ) {
     LaunchedEffect(Unit) {
@@ -77,7 +76,6 @@ fun HomeScreen(
         // ── ① 고정 상단 헤더 (항상 보임) ─────────────────────────
         StickyHeader(
             onSearchClick = onSearchClick,
-            onMapClick = onMapClick,
             onSettingsClick = {}
         )
 
@@ -96,7 +94,6 @@ fun HomeScreen(
 @Composable
 fun StickyHeader(
     onSearchClick: () -> Unit,
-    onMapClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     Column(

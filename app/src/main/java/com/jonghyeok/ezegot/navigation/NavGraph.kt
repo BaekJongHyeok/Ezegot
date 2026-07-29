@@ -7,7 +7,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.jonghyeok.ezegot.ui.screen.HomeScreen
-import com.jonghyeok.ezegot.ui.screen.MapScreen
 import com.jonghyeok.ezegot.ui.screen.SearchScreen
 import com.jonghyeok.ezegot.ui.screen.SplashScreen
 import com.jonghyeok.ezegot.ui.screen.station.StationScreen
@@ -16,7 +15,6 @@ sealed class Screen(val route: String) {
     object Splash : Screen("splash")
     object Home : Screen("home")
     object Search : Screen("search")
-    object Map : Screen("map")
     object Station : Screen("station/{stationName}/{lineNumber}") {
         fun createRoute(name: String, line: String) = "station/$name/$line"
     }
@@ -39,7 +37,6 @@ fun NavGraph(navController: NavHostController) {
         composable(Screen.Home.route) {
             HomeScreen(
                 onSearchClick = { navController.navigate(Screen.Search.route) },
-                onMapClick = { navController.navigate(Screen.Map.route) },
                 onStationClick = { name, line ->
                     navController.navigate(Screen.Station.createRoute(name, line))
                 }
@@ -74,10 +71,6 @@ fun NavGraph(navController: NavHostController) {
                     }
                 }
             )
-        }
-
-        composable(Screen.Map.route) {
-            MapScreen(onBack = { navController.popBackStack() })
         }
     }
 }
