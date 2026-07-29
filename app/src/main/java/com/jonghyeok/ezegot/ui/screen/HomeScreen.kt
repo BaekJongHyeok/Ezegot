@@ -214,7 +214,8 @@ fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Un
     val loadingStates by viewModel.loadingStates.collectAsState()
     val context = LocalContext.current
 
-    var currentTime by remember { mutableStateOf(LocalTime.now()) }
+    // 갱신 시각은 ViewModel이 응답 반영 시점에 기록한 값을 그대로 쓴다
+    val lastUpdatedAt by viewModel.lastUpdatedAt.collectAsState()
     val formatter = DateTimeFormatter.ofPattern("a h:mm")
     var rotation by remember { mutableStateOf(0f) }
     val animRotation by animateFloatAsState(rotation, tween(500), label = "r")
@@ -244,7 +245,6 @@ fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Un
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
-                            currentTime = LocalTime.now()
                             viewModel.loadRealtimeArrival()
                             rotation += 360f
                         }
@@ -253,7 +253,10 @@ fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Un
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(currentTime.format(formatter), style = MaterialTheme.typography.labelMedium, color = TextHint)
+                    // 아직 한 번도 데이터가 들어오지 않았으면 시각을 보여주지 않는다
+                    lastUpdatedAt?.let {
+                        Text(it.format(formatter), style = MaterialTheme.typography.labelMedium, color = TextHint)
+                    }
                     Icon(
                         Icons.Default.Refresh, contentDescription = "새로고침", tint = TextHint,
                         modifier = Modifier.size(14.dp).graphicsLayer(rotationZ = animRotation)

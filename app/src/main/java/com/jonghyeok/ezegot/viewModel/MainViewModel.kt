@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalTime
 import kotlin.math.*
 import javax.inject.Inject
 
@@ -44,6 +45,16 @@ class MainViewModel @Inject constructor(
     // ── 개별 카드 로딩 상태 (stationName → Boolean) ───────────────
     private val _loadingStates = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val loadingStates: StateFlow<Map<String, Boolean>> = _loadingStates.asStateFlow()
+
+    /**
+     * 도착 정보가 마지막으로 화면에 반영된 시각.
+     *
+     * 새로고침 버튼을 누른 시각이 아니라 응답이 실제로 들어온 시각이다.
+     * 누른 시각을 쓰면 요청이 실패해도 시각만 갱신돼, 오래된 데이터가
+     * 방금 갱신된 것처럼 보인다.
+     */
+    private val _lastUpdatedAt = MutableStateFlow<LocalTime?>(null)
+    val lastUpdatedAt: StateFlow<LocalTime?> = _lastUpdatedAt.asStateFlow()
 
     // ── 근처 역 ──────────────────────────────────────────────────
     private val _nearbyStationList = MutableStateFlow<List<NearbyStation>>(emptyList())
@@ -138,6 +149,13 @@ class MainViewModel @Inject constructor(
                     // 응답이 오는 즉시 해당 카드만 업데이트 (전체 대기 없음)
                     _realtimeArrivalInfo.update { current -> current + (name to arrivals) }
                     _loadingStates.update   { current -> current + (name to false) }
+
+                    // 실제 데이터가 들어온 경우에만 갱신 시각으로 인정한다.
+                    // Repository가 실패 시 빈 값을 반환하므로 빈 응답은 실패와
+                    // 구분되지 않는다. 이때 시각을 올리면 실패를 성공처럼 보이게 한다.
+                    if (arrivals.isNotEmpty()) {
+                        _lastUpdatedAt.value = LocalTime.now()
+                    }
                 }
             }
         }
