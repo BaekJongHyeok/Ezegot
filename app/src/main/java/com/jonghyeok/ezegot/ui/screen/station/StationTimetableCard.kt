@@ -85,6 +85,25 @@ internal fun getUpcomingTrainsFromTimeTable(schedules: List<TimeTableSchedule>):
 }
 
 /**
+ * 상·하행 방면 라벨을 만든다.
+ *
+ * 도착 정보 카드가 쓰는 라벨(실시간 `trainLineName`에서 뽑은 "교대 / 역삼")을
+ * 그대로 쓰되, 두 값이 같거나 비어 있으면 방향 표기로 되돌린다.
+ * 2호선은 상하행 대신 내선/외선이 오므로 그 표기를 따른다.
+ */
+private fun directionLabels(upDtLabel: String, dnDtLabel: String): Pair<String, String> {
+    val up = upDtLabel.replace("방면", "").trim()
+    val dn = dnDtLabel.replace("방면", "").trim()
+
+    val isLoop = upDtLabel.contains("내선") || dnDtLabel.contains("외선")
+    return if (up.isEmpty() || dn.isEmpty() || up == dn) {
+        if (isLoop) "내선" to "외선" else "상행" to "하행"
+    } else {
+        up to dn
+    }
+}
+
+/**
  * 첫차 / 막차 시간표 카드.
  *
  * 표시 우선순위:
@@ -146,24 +165,20 @@ internal fun StationTimeTableCard(
                     textAlign = TextAlign.Center
                 )
             } else {
+                // 방면 라벨은 위쪽 도착 정보 카드와 같은 값을 쓴다.
+                // 시간표의 destination(종착역)으로 라벨을 만들면 2호선 같은 순환선에서
+                // 상·하행 종착역이 모두 "성수"라 좌우 라벨이 똑같아진다.
+                // 방면(교대 / 역삼)은 방향마다 다르므로 이쪽이 구분에 맞다.
+                val (upLabel, dnLabel) = directionLabels(upDtLabel, dnDtLabel)
+
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     // 상행
                     Column(modifier = Modifier.weight(1f)) {
                         val isLoading = up == null
                         val upEmpty = up?.schedules?.isEmpty() ?: false
 
-                        // 로딩 중에는 "상행/내선" 등 기본 명칭 사용, 완료 후에는 대표 목적지 사용
-                        val repUpDest = if (!isLoading && !upEmpty) {
-                            up!!.schedules.mapNotNull { it.destination.ifEmpty { null } }
-                                .groupBy { it }
-                                .maxByOrNull { it.value.size }?.key ?: upDtLabel
-                        } else {
-                            // "왕십리 방면" -> "상행", "성수내선 방면" -> "내선"
-                            if (upDtLabel.contains("내선")) "내선" else "상행"
-                        }
-
                         Text(
-                            text = repUpDest.replace("방면", "").trim() + " 방면",
+                            text = "$upLabel 방면",
                             style = MaterialTheme.typography.labelMedium,
                             color = Navy800,
                             fontWeight = FontWeight.SemiBold,
@@ -198,18 +213,8 @@ internal fun StationTimeTableCard(
                         val isLoading = down == null
                         val downEmpty = down?.schedules?.isEmpty() ?: false
 
-                        // 로딩 중에는 "하행/외선" 등 기본 명칭 사용, 완료 후에는 대표 목적지 사용
-                        val repDnDest = if (!isLoading && !downEmpty) {
-                            down!!.schedules.mapNotNull { it.destination.ifEmpty { null } }
-                                .groupBy { it }
-                                .maxByOrNull { it.value.size }?.key ?: dnDtLabel
-                        } else {
-                            // "인천 방면" -> "하행", "성수외선 방면" -> "외선"
-                            if (dnDtLabel.contains("외선")) "외선" else "하행"
-                        }
-
                         Text(
-                            text = repDnDest.replace("방면", "").trim() + " 방면",
+                            text = "$dnLabel 방면",
                             style = MaterialTheme.typography.labelMedium,
                             color = Navy800,
                             fontWeight = FontWeight.SemiBold,
