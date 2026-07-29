@@ -198,7 +198,8 @@ internal fun ArrivalCard(
                             ) {
                                 Icon(
                                     imageVector = if (isAlarmSet) Icons.Default.Notifications else Icons.Default.NotificationsNone,
-                                    contentDescription = "알람",
+                                    // 켜짐/꺼짐이 아이콘 모양으로만 구분돼 있어 상태를 문구로 구분한다
+                                    contentDescription = if (isAlarmSet) "알람 해제" else "알람 설정",
                                     tint = if (isAlarmSet) SkyBlue400 else TextHint,
                                     modifier = Modifier.size(16.dp)
                                 )

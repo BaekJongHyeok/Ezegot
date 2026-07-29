@@ -15,7 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -116,7 +118,11 @@ fun MapScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp)
-                        .clickable { onSearchClick?.invoke() },
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(
+                            onClickLabel = "검색 화면 열기",
+                            role = Role.Button
+                        ) { onSearchClick?.invoke() },
                     shape = RoundedCornerShape(12.dp),
                     color = SurfaceWhite,
                     shadowElevation = 4.dp

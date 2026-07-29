@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -128,7 +129,11 @@ fun StickyHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
-                .clickable { onSearchClick() },
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(
+                    onClickLabel = "검색 화면 열기",
+                    role = Role.Button
+                ) { onSearchClick() },
             shape = RoundedCornerShape(14.dp),
             color = Navy700
         ) {
@@ -740,7 +745,8 @@ fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName:
             if (lineColors.size > 1) {
                 Icon(
                     imageVector = Icons.Default.SyncAlt,
-                    contentDescription = null,
+                    // 환승역 여부가 이 아이콘 모양으로만 전달되고 있었다
+                    contentDescription = "환승역",
                     modifier = Modifier.size(baseSize * 0.5f),
                     tint = Navy900
                 )

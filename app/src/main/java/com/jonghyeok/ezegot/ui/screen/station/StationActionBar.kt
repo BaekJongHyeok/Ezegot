@@ -62,14 +62,28 @@ internal fun StationActionBar(
         ) {
             // 알람
             ActionItem(
-                icon = { Icon(if (isNotification) Icons.Default.Notifications else Icons.Default.NotificationsNone, null, tint = if (isNotification) SkyBlue400 else TextSecondary, modifier = Modifier.size(22.dp)) },
+                icon = {
+                    Icon(
+                        imageVector = if (isNotification) Icons.Default.Notifications else Icons.Default.NotificationsNone,
+                        contentDescription = null,   // 아래 label "알람"이 읽히므로 중복을 피한다
+                        tint = if (isNotification) SkyBlue400 else TextSecondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
                 label = "알람",
                 onClick = { viewModel.toggleNotification() }
             )
             VerticalDivider(modifier = Modifier.height(32.dp), thickness = 1.dp, color = DividerColor)
             // 전화
             ActionItem(
-                icon = { Icon(Icons.Default.Call, null, tint = TextSecondary, modifier = Modifier.size(22.dp)) },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = null,   // 아래 label "전화"가 읽힌다
+                        tint = TextSecondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
                 label = "전화",
                 onClick = {
                     val intent = Intent(Intent.ACTION_DIAL).apply {
@@ -81,7 +95,14 @@ internal fun StationActionBar(
             VerticalDivider(modifier = Modifier.height(32.dp), thickness = 1.dp, color = DividerColor)
             // 공유
             ActionItem(
-                icon = { Icon(Icons.Default.Share, null, tint = TextSecondary, modifier = Modifier.size(22.dp)) },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,   // 아래 label "공유"가 읽힌다
+                        tint = TextSecondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
                 label = "공유",
                 onClick = {
                     val stationName = stationInfo?.stationName ?: ""
