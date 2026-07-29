@@ -1,0 +1,71 @@
+name: Android CI
+
+# 현재는 쌓아둔 리팩터링 브랜치를 모두 검증해야 하므로 브랜치를 제한하지 않는다.
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      # local.properties는 커밋되지 않으므로 CI에는 API 키가 없다.
+      # build.gradle.kts가 없는 키를 빈 문자열로 대체하도록 되어 있어
+      # 빌드 자체는 통과한다 (네트워크를 쓰는 기능만 동작하지 않음).
+      # SDK 경로는 러너의 ANDROID_HOME으로 해결된다.
+
+      - name: assembleDebug
+        id: assemble
+        continue-on-error: true
+        run: ./gradlew assembleDebug --stacktrace
+
+      # 앞 단계가 실패해도 나머지 결과를 함께 보기 위해 always()로 실행한다.
+      - name: test
+        id: test
+        if: always()
+        continue-on-error: true
+        run: ./gradlew test --stacktrace
+
+      - name: lintDebug
+        id: lint
+        if: always()
+        continue-on-error: true
+        run: ./gradlew lintDebug --stacktrace
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/
+            app/build/outputs/apk/debug/
+          if-no-files-found: warn
+          retention-days: 7
+
+      # 각 단계를 continue-on-error로 돌렸으므로, 결과를 모아 잡의 성패를 결정한다.
+      - name: Check results
+        if: always()
+        run: |
+          echo "assembleDebug : ${{ steps.assemble.outcome }}"
+          echo "test          : ${{ steps.test.outcome }}"
+          echo "lintDebug     : ${{ steps.lint.outcome }}"
+          if [ "${{ steps.assemble.outcome }}" != "success" ] \
+            || [ "${{ steps.test.outcome }}" != "success" ] \
+            || [ "${{ steps.lint.outcome }}" != "success" ]; then
+            echo "::error::하나 이상의 단계가 실패했습니다"
+            exit 1
+          fi

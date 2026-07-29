@@ -1,5 +1,7 @@
 # Ezegot
 
+[![Android CI](https://github.com/BaekJongHyeok/Ezegot/actions/workflows/android.yml/badge.svg)](https://github.com/BaekJongHyeok/Ezegot/actions/workflows/android.yml)
+
 기존에 만들었던 realtime 지하철 어플을 기반으로 하여 새로 개발한 대중교통 알림 앱
 
 ## 실행 준비
