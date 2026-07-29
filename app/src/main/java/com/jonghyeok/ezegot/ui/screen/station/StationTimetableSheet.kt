@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -42,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -89,19 +90,31 @@ internal fun StationTimetableSheet(
     }
 
     val schedules = if (showUp) upSchedules else dnSchedules
-    val sorted = remember(schedules) { schedules.sortedBy { it.leftTime.toServiceMinutes() } }
+    val sorted = remember(schedules) {
+        schedules.filter { it.leftTime.isRealDeparture() }
+            .sortedBy { it.leftTime.toServiceMinutes() }
+    }
 
     val (past, upcoming) = remember(sorted, nowMinutes) {
         sorted.partition { it.leftTime.toServiceMinutes() < nowMinutes }
     }
     val nextTrains = upcoming.take(NEXT_TRAIN_COUNT)
 
-    // 시트 안 목록에 높이를 정해 줘야 LazyColumn이 스크롤된다.
-    // 화면 비율로 잡아 기기가 달라져도 시트가 화면을 덮거나 반쪽만 차지하지 않게 한다.
-    val listMaxHeight = (LocalConfiguration.current.screenHeightDp * 0.70f).dp
+    // 방향을 바꾸면 목록을 맨 위로 되돌린다. 유지하면 "지금 HH:MM"과 다음 열차가
+    // 화면 밖에 남아, 전환했는데 목록 중간부터 보인다.
+    val listState = rememberLazyListState()
+    LaunchedEffect(showUp) { listState.scrollToItem(0) }
 
-    // 제스처/버튼 내비게이션 여백. 없으면 마지막 시간대가 시스템 바에 가린다.
-    Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
+    // 시트를 화면 높이만큼 채운다. 예전에는 목록 높이를 화면 비율로 잡아서
+    // 뒤에 역 상세 헤더가 어중간하게 걸쳐 보였다. 시간표는 한 번에 집중해 보는
+    // 화면이라 뒤가 비쳐 얻는 것이 없다.
+    // 제스처/버튼 내비게이션 여백이 없으면 마지막 시간대가 시스템 바에 가린다.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .navigationBarsPadding()
+    ) {
 
         // ── 제목 ────────────────────────────────────────────────
         // 예전에는 방향이 제목 옆 칩이라 역명처럼 읽혔다. 제목은 역명으로 두고
@@ -152,7 +165,8 @@ internal fun StationTimetableSheet(
         HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
         LazyColumn(
-            modifier = Modifier.heightIn(max = listMaxHeight),
+            state = listState,
+            modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
             // ── 지금 + 다음 열차 ────────────────────────────────
@@ -348,9 +362,9 @@ private fun MinuteCell(minute: String, express: Boolean, color: Color) {
         if (express) {
             Text(
                 text = "급",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = 1.dp)
+                modifier = Modifier.padding(start = 2.dp)
             )
         }
     }
@@ -465,6 +479,17 @@ private fun DirectionTab(
  * 그 열차가 하루의 맨 끝으로 밀려 "이미 지났다"고 판정된다.
  * 04시 이전은 전날 운행의 연장으로 보고 24를 더한다.
  */
+/**
+ * 실제 운행 시각인지.
+ *
+ * 응답에 `LEFTTIME`이 `00:00:00`인 행이 섞여 온다. 4호선 사당 상행은 237행 중
+ * 110행이 그렇다. 이 API는 자정을 넘긴 열차를 `24:08`·`25:02`로 이어 쓰므로
+ * `00:`으로 시작하는 값은 시각이 아니라 빈 자리표시다.
+ * 거르지 않으면 "0시" 섹션에 분이 전부 00인 줄이 수십 개 생긴다.
+ */
+private fun String.isRealDeparture(): Boolean =
+    length >= 5 && !startsWith("00:")
+
 private fun String.toServiceMinutes(): Int {
     val hour = substring(0, 2).toIntOrNull() ?: return 0
     val minute = substring(3, 5).toIntOrNull() ?: return 0
