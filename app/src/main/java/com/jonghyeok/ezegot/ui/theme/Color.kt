@@ -138,16 +138,6 @@ fun subwayLineHeaderColors(lineColor: Color): SubwayHeaderColors {
 }
 
 /**
- * 헤더 위 칩 배경.
- *
- * 예전에는 글자색을 22% 농도로 깔았는데, 글자와 같은 색을 옅게 깐 것이라
- * 칩 안 명암비가 오히려 3.0까지 떨어졌다. 반대색을 12%로 얹어 배경을 밀어낸다.
- */
-fun subwayHeaderChipBackground(colors: SubwayHeaderColors): Color =
-    if (colors.content == Color.White) Color.Black.copy(alpha = 0.12f)
-    else Color.White.copy(alpha = 0.12f)
-
-/**
  * 연한 노선색 배경. 주변 역 정사각 뱃지처럼 작은 면적에 쓴다.
  * 원색을 흰색과 섞어 12% 농도로 만든다.
  */

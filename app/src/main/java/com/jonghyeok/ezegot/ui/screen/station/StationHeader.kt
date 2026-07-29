@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,8 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jonghyeok.ezegot.ui.screen.SubwayLineIcon
 import com.jonghyeok.ezegot.ui.theme.SubwayHeaderColors
-import com.jonghyeok.ezegot.ui.theme.subwayHeaderChipBackground
 
 /**
  * 역 상세 헤더. 배경이 그 역의 호선색이다.
@@ -52,6 +54,7 @@ import com.jonghyeok.ezegot.ui.theme.subwayHeaderChipBackground
  * 배경을 어둡게 보정하거나(색상·채도 유지) 밝은 노선은 검은 글자로 바꿔 넘긴다.
  * `subwayLineHeaderColors()` 참고.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun StationHeader(
     stationName: String,
@@ -135,38 +138,38 @@ internal fun StationHeader(
 
         if (transferLines.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            Row(
+            // 환승이 3개인 역(왕십리 등)이 있어 한 줄에 담기지 않는다.
+            // "환승" 라벨을 첫 항목으로 같은 흐름에 넣어 줄바꿈이 자연스럽게 되게 한다.
+            FlowRow(
                 modifier = Modifier.padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                // 아이콘이 26dp라 라벨을 세로 가운데에 맞춘다
+                Box(
+                    modifier = Modifier.height(26.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "환승",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = colors.content,
+                        modifier = Modifier.padding(end = 2.dp)
+                    )
+                }
                 transferLines.forEach { name ->
-                    HeaderChip(
-                        text = "환승 $name",
-                        colors = colors,
-                        onClick = { onTransferClick(name) }
+                    SubwayLineIcon(
+                        lineName = name,
+                        // 헤더 배경이 노선색이라 아이콘이 묻힌다. 실측한 13개 환승 조합 중
+                        // 11개가 3:1 미만이었다(왕십리 2호선 헤더 위 5호선은 1.10:1).
+                        // 테두리를 예외가 아니라 기본으로 두르고, 색은 헤더 글자색을 쓴다.
+                        // 그 색은 배경 대비 4.5:1이 보장되므로 어느 노선 위에서도 보인다.
+                        borderColor = colors.content,
+                        modifier = Modifier.clickable { onTransferClick(name) }
                     )
                 }
             }
         }
-    }
-}
-
-/** 헤더 위 반투명 칩. 배경이 노선색이라 흰 계열을 alpha로 얹는다 */
-@Composable
-private fun HeaderChip(text: String, colors: SubwayHeaderColors, onClick: (() -> Unit)? = null) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(subwayHeaderChipBackground(colors))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 9.dp, vertical = 4.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-            color = colors.content,
-            maxLines = 1
-        )
     }
 }
 
