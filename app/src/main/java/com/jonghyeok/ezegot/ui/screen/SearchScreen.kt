@@ -169,11 +169,12 @@ fun SearchScreen(
                 )
             }
             textState.text.isNotEmpty() && filterSettled -> {
+                // 이 화면은 키보드가 항상 올라와 있어 세로 중앙 정렬하면 가려진다.
+                // 고정 높이로 두어 헤더 바로 아래, 키보드 위에 오도록 한다.
                 EmptyStateView(
                     icon = Icons.Default.Search,
                     title = "검색 결과가 없습니다",
-                    description = "역 이름을 다시 확인해 주세요",
-                    modifier = Modifier.fillMaxSize()
+                    description = "역 이름을 다시 확인해 주세요"
                 )
             }
             textState.text.isEmpty() -> {
@@ -228,12 +229,12 @@ fun RecentSearchList(
     onDelete: (BasicStationInfo) -> Unit
 ) {
     if (recentSearches.isEmpty()) {
-        // 앱 첫 실행 시 반드시 마주치는 화면이라 안내가 없으면 백지로 보인다
+        // 앱 첫 실행 시 반드시 마주치는 화면이라 안내가 없으면 백지로 보인다.
+        // 키보드가 올라와 있으므로 고정 높이로 두어 가려지지 않게 한다.
         EmptyStateView(
             icon = Icons.Default.Search,
             title = "최근 검색 기록이 없습니다",
-            description = "역 이름을 검색해 보세요",
-            modifier = Modifier.fillMaxSize()
+            description = "역 이름을 검색해 보세요"
         )
         return
     }
