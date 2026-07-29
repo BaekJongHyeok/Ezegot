@@ -26,6 +26,7 @@ import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.api.TimeTableResponse
 import com.jonghyeok.ezegot.db.SubwayAlarmEntity
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.ui.theme.DividerColor
 import com.jonghyeok.ezegot.ui.theme.Navy800
 import com.jonghyeok.ezegot.ui.theme.TextHint
 import com.jonghyeok.ezegot.ui.theme.TextPrimary
@@ -105,7 +106,8 @@ internal fun ArrivalInfoSection(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = Navy800,
                         uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = TextHint
+                        // 텍스트 토큰(TextHint)을 쓰면 꺼짐 트랙이 어두워져 켜짐처럼 보인다
+                        uncheckedTrackColor = DividerColor
                     )
                 )
                 Text(

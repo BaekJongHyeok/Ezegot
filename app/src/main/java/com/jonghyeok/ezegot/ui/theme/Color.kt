@@ -19,8 +19,11 @@ val CardSurface     = Color(0xFFFFFFFF)
 
 // ── Text ───────────────────────────────────────────────────────
 val TextPrimary   = Color(0xFF0D1B2A)
-val TextSecondary = Color(0xFF546E7A)
-val TextHint      = Color(0xFFB0BEC5)
+val TextSecondary = Color(0xFF546E7A)   // 흰 배경 대비 5.41:1
+// 흰 배경 대비 4.57:1 (WCAG AA 본문 기준 4.5:1 충족).
+// 이전 값 #B0BEC5는 1.91:1이라, 빈 상태·에러 문구처럼 정작 읽혀야 할 텍스트가
+// 가장 안 보이는 색으로 쓰이고 있었다.
+val TextHint      = Color(0xFF5C7A88)
 val TextOnDark    = Color(0xFFFFFFFF)
 
 // ── Arrival colors ─────────────────────────────────────────────

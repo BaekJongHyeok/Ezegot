@@ -250,7 +250,9 @@ internal fun FullTimetableSheet(
                                 }
                                 val destColor = when {
                                     isNext -> TextOnDark.copy(alpha = 0.75f)
-                                    isPast -> TextHint.copy(alpha = 0.55f)
+                                    // alpha 0.55를 얹으면 실효 명암비가 2:1 아래로 떨어져 읽을 수 없다.
+                                    // 지난 열차라는 것은 칩 배경색만으로 충분히 구분된다.
+                                    isPast -> TextHint
                                     else   -> TextSecondary
                                 }
 

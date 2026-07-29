@@ -142,7 +142,8 @@ fun StickyHeader(
                 Text(
                     text = "지하철 역 이름 검색",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextHint
+                    // TextHint는 밝은 배경 기준 색이라 Navy700 위에서는 대비가 부족하다
+                    color = TextOnDark.copy(alpha = 0.6f)
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
