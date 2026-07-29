@@ -238,18 +238,10 @@ private fun FavoriteCarouselCard(
                 modifier = Modifier.weight(1f, fill = false)
             )
             Spacer(Modifier.width(6.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(onLine.copy(alpha = 0.22f))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = favorite.lineNumber.removePrefix("0"),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = onLine
-                )
-            }
+            TranslucentChip(text = favorite.lineNumber.removePrefix("0"), onLine = onLine)
+            Spacer(Modifier.width(4.dp))
+            // 같은 역이라도 방향마다 카드가 따로 있으므로, 어느 쪽인지 카드에서 바로 보여야 한다
+            TranslucentChip(text = favorite.direction, onLine = onLine)
         }
 
         // 카드 본문 – 방향 하나가 즐겨찾기 하나이므로 행선지별로 나눈다
@@ -280,6 +272,24 @@ private fun FavoriteCarouselCard(
                 }
             }
         }
+    }
+}
+
+/** 호선색 헤더 위에 얹는 반투명 칩. 배경이 노선마다 달라 글자색은 넘겨받는다 */
+@Composable
+private fun TranslucentChip(text: String, onLine: androidx.compose.ui.graphics.Color) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(9.dp))
+            .background(onLine.copy(alpha = 0.22f))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            color = onLine,
+            maxLines = 1
+        )
     }
 }
 
