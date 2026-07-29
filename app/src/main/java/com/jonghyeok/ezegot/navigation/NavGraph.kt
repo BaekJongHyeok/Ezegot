@@ -8,15 +8,16 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.jonghyeok.ezegot.ui.screen.HomeScreen
-import com.jonghyeok.ezegot.ui.screen.SearchScreen
+import com.jonghyeok.ezegot.ui.screen.MainShell
 import com.jonghyeok.ezegot.ui.screen.SplashScreen
 import com.jonghyeok.ezegot.ui.screen.station.StationScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
-    object Home : Screen("home")
-    object Search : Screen("search")
+
+    /** 하단 탭 4개를 가진 최상위 화면 */
+    object Main : Screen("main")
+
     object Station : Screen("station/{stationName}/{lineNumber}") {
         fun createRoute(name: String, line: String) = "station/$name/$line"
     }
@@ -39,25 +40,17 @@ fun NavGraph(navController: NavHostController) {
         composable(Screen.Splash.route) {
             SplashScreen(
                 onFinished = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Screen.Home.route) {
-            HomeScreen(
-                onSearchClick = { navController.navigate(Screen.Search.route) },
-                onStationClick = { name, line ->
-                    navController.navigate(Screen.Station.createRoute(name, line))
-                }
-            )
-        }
-
-        composable(Screen.Search.route) {
-            SearchScreen(
-                onBack = { navController.popBackStack() },
+        // 역 상세는 이 바깥에 둔다. 최상위 목적지가 아니라 파고들어간 화면이라
+        // 하단바를 유지하면 지금 화면과 무관한 바가 계속 자리를 차지한다.
+        composable(Screen.Main.route) {
+            MainShell(
                 onStationClick = { name, line ->
                     navController.navigate(Screen.Station.createRoute(name, line))
                 }

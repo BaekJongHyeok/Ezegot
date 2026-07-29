@@ -4,50 +4,46 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
 /*
- * 라이트 팔레트.
+ * 라이트 팔레트 (목업 v5).
  *
  * 화면 코드는 이 값들을 직접 쓰지 않는다. MaterialTheme.colorScheme만 참조한다.
- * 유일한 예외는 노선 공식 색인 [getSubwayLineColor], [onSubwayLineColor]다.
- *
- * 팔레트를 한 벌 더 만들고 Theme.kt에서 고르기만 하면 다른 테마를 추가할 수 있다.
- * 화면 코드는 손대지 않아도 된다.
+ * 예외는 노선 공식 색 함수들뿐이다.
  */
 
 // ── 바탕 ────────────────────────────────────────────────────────
-/** 화면 바탕 */
-val LightBackground = Color(0xFFFFFFFF)
+/** 페이지 바탕. 카드가 흰색이라 바탕은 한 톤 낮춘다 */
+val LightPageBackground = Color(0xFFF5F6F8)
 
-/** 카드·섹션 배경. 바탕과 1.05:1이라 경계는 [LightOutline]이 맡는다 */
-val LightSurface = Color(0xFFF8FAFC)
+/** 카드 */
+val LightCard = Color(0xFFFFFFFF)
 
-/** 구분선·테두리 */
-val LightOutline = Color(0xFFE2E8F0)
+/** 카드 테두리 1dp */
+val LightCardBorder = Color(0xFFE6E8EC)
 
-// ── 텍스트 ──────────────────────────────────────────────────────
-/** 주 텍스트. 바탕 대비 17.9:1 */
-val LightTextPrimary = Color(0xFF0F172A)
+/** 카드 안 헤더 영역 */
+val LightCardHeaderTint = Color(0xFFFAFBFC)
 
-/** 보조 텍스트. 바탕 대비 4.76:1 */
-val LightTextSecondary = Color(0xFF64748B)
+/** 리스트 행 구분선 */
+val LightDivider = Color(0xFFF0F1F4)
 
-/** 비활성·지난 정보. 바탕 대비 2.6:1 — 본문용이 아니다 */
-val LightTextDisabled = Color(0xFF94A3B8)
+// ── 텍스트 4단계 ────────────────────────────────────────────────
+val LightTextPrimary = Color(0xFF16181D)
+val LightTextSecondary = Color(0xFF5F6570)
+val LightTextTertiary = Color(0xFF8A9098)
+val LightTextDisabled = Color(0xFFB4B9C0)
 
-// ── 강조 ────────────────────────────────────────────────────────
-/** 브랜드·선택·링크. 바탕 대비 5.17:1 */
-val LightAccent = Color(0xFF2563EB)
+// ── 도착 임박 ───────────────────────────────────────────────────
+val LightUrgent = Color(0xFFD6202A)
 
-/**
- * 도착 임박 전용. 바탕 대비 4.83:1
- *
- * 브랜드색과 분리한 이유는, 둘이 같으면 어느 쪽도 강조로 기능하지 않기 때문이다.
- */
-val LightUrgent = Color(0xFFDC2626)
+/** "곧 도착" 칩 배경 */
+val LightUrgentBg = Color(0xFFFDECEE)
+
+/** "곧 도착" 칩 텍스트. 배경이 연해서 본문 Urgent보다 어둡다 */
+val LightUrgentText = Color(0xFFA6122F)
 
 // ── 지하철 호선 색상 ────────────────────────────────────────────
 /**
  * 노선 공식 색. 팔레트와 무관하게 고정이므로 화면에서 직접 쓰는 유일한 예외다.
- * 이 색 위에 얹을 글자색은 [onSubwayLineColor]가 배경 휘도로 고른다.
  */
 fun getSubwayLineColor(lineName: String): Color {
     return when (lineName) {
@@ -74,20 +70,53 @@ fun getSubwayLineColor(lineName: String): Color {
 }
 
 /**
- * 노선 색 위에 얹을 글자색을 배경 휘도로 고른다.
+ * 노선 원색 위에 얹을 글자색.
  *
  * 흰 글자를 고정으로 쓰면 밝은 노선에서 읽히지 않는다. 수인분당선(#FABE00) 위
- * 흰 글씨는 1.69:1이었다.
+ * 흰 글씨는 1.69:1이다. 배경 휘도로 순수 검정·흰색 중 대비가 큰 쪽을 고른다.
  *
- * 팔레트의 TextPrimary·Background 대신 순수 검정·흰색을 쓴다. 팔레트 색으로는
- * 일부 노선이 어느 쪽을 골라도 4.5:1을 못 넘긴다. 순수색이면 18개 노선 전부
- * 4.5:1 이상이 되고 최악(GTX-A)이 4.63:1이다.
- *
- * 임계 0.179는 두 선택의 명암비가 같아지는 휘도다. 이 값에서 양쪽 모두 4.58:1이라
- * 어떤 배경색이 와도 기준을 밑돌지 않는다.
+ * 팔레트 색(#16181D / #FFFFFF)이 아니라 순수 검정을 쓰는 이유는, 근사색으로는
+ * 일부 노선이 어느 쪽을 골라도 4.5:1을 못 넘기기 때문이다.
+ * 임계 0.179는 두 선택의 명암비가 같아지는 휘도이며, 그 지점에서 양쪽 모두
+ * 4.58:1이라 어떤 배경색이 와도 기준을 밑돌지 않는다.
  */
 fun onSubwayLineColor(background: Color): Color =
-    if (background.luminance() > 0.179f) SubwayBadgeOnLight else SubwayBadgeOnDark
+    if (background.luminance() > 0.179f) Color.Black else Color.White
 
-private val SubwayBadgeOnLight = Color(0xFF000000)
-private val SubwayBadgeOnDark = Color(0xFFFFFFFF)
+/**
+ * 연한 노선색 배경. 주변 역 정사각 뱃지처럼 작은 면적에 쓴다.
+ * 원색을 흰색과 섞어 12% 농도로 만든다.
+ */
+fun subwayLineTint(lineColor: Color): Color = lineColor.copy(alpha = 0.12f)
+
+/**
+ * 연한 배경 위에 얹을 진한 노선색.
+ *
+ * 원색 그대로는 밝은 노선(수인분당선·9호선 등)에서 연한 배경과 붙어 읽히지 않는다.
+ * 검정과 섞어 70% 수준으로 어둡게 만든 뒤, 그래도 4.5:1에 못 미치면
+ * 기준을 넘을 때까지 더 어둡게 한다.
+ */
+fun subwayLineOnTint(lineColor: Color, background: Color): Color {
+    var factor = 0.70f
+    var candidate = lineColor.darken(factor)
+    // 최대 10회. 매번 30%씩 더 어둡게 하며 4.5:1을 찾는다
+    repeat(10) {
+        if (contrastRatio(candidate, background) >= 4.5f) return candidate
+        factor *= 0.70f
+        candidate = lineColor.darken(factor)
+    }
+    return candidate
+}
+
+/** 원색을 검정 쪽으로 [factor]만큼 남긴다 (0에 가까울수록 어둡다) */
+private fun Color.darken(factor: Float): Color =
+    Color(red * factor, green * factor, blue * factor, alpha)
+
+/** WCAG 상대 명암비 */
+fun contrastRatio(a: Color, b: Color): Float {
+    val la = a.luminance()
+    val lb = b.luminance()
+    val hi = maxOf(la, lb)
+    val lo = minOf(la, lb)
+    return (hi + 0.05f) / (lo + 0.05f)
+}

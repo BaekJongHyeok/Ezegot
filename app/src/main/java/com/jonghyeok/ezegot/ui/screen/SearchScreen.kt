@@ -39,7 +39,6 @@ import com.jonghyeok.ezegot.viewModel.SearchViewModel
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
-    onBack: () -> Unit,
     onStationClick: (String, String) -> Unit
 ) {
     val textState by viewModel.textState.collectAsState()
@@ -68,14 +67,11 @@ fun SearchScreen(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
+            // 탭으로 들어오므로 뒤로가기 버튼이 없다
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = MaterialTheme.colorScheme.onSurface)
-                }
-
                 Surface(
                     modifier = Modifier
                         .weight(1f)
