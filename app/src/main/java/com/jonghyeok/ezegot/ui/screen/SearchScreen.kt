@@ -32,7 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.StationInfo
-import com.jonghyeok.ezegot.ui.theme.*
+import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
+import com.jonghyeok.ezegot.ui.theme.onSubwayLineColor
 import com.jonghyeok.ezegot.viewModel.SearchViewModel
 
 @Composable
@@ -58,13 +59,13 @@ fun SearchScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundLight)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // ── Header ──────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Navy900, Navy800)))
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             Row(
@@ -72,7 +73,7 @@ fun SearchScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = TextOnDark)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = MaterialTheme.colorScheme.onSurface)
                 }
 
                 Surface(
@@ -80,7 +81,7 @@ fun SearchScreen(
                         .weight(1f)
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    color = Navy700
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
                         modifier = Modifier
@@ -92,7 +93,7 @@ fun SearchScreen(
                         Icon(
                             Icons.Default.Search,
                             contentDescription = null,
-                            tint = SkyBlue400,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Box(modifier = Modifier.weight(1f)) {
@@ -100,8 +101,8 @@ fun SearchScreen(
                                 Text(
                                     text = "지하철 역 이름 검색",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    // TextHint는 밝은 배경 기준 색이라 Navy700 위에서는 대비가 부족하다
-                                    color = TextOnDark.copy(alpha = 0.6f)
+                                    // 검색 필드는 surfaceVariant 위에 있다
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             BasicTextField(
@@ -113,8 +114,8 @@ fun SearchScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextOnDark),
-                                cursorBrush = SolidColor(SkyBlue400),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
@@ -143,7 +144,7 @@ fun SearchScreen(
                                 Icon(
                                     Icons.Default.Close,
                                     contentDescription = "지우기",
-                                    tint = TextOnDark.copy(alpha = 0.6f),   // Navy700 배경
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,   // surfaceVariant 배경
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -201,8 +202,8 @@ fun SearchResultList(stations: List<StationInfo>, onItemClick: (StationInfo) -> 
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = TextHint, modifier = Modifier.size(16.dp))
-                    Text(text = station.stationName, style = MaterialTheme.typography.bodyLarge, color = TextPrimary)
+                    Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    Text(text = station.stationName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 }
                 val lineColor = getSubwayLineColor(station.lineNumber)
                 Surface(
@@ -212,12 +213,12 @@ fun SearchResultList(stations: List<StationInfo>, onItemClick: (StationInfo) -> 
                     Text(
                         text = station.lineNumber.removePrefix("0"),
                         style = MaterialTheme.typography.labelSmall,
-                        color = TextOnDark,
+                        color = onSubwayLineColor(lineColor),
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
-            HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 20.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 20.dp))
         }
     }
 }
@@ -251,7 +252,7 @@ fun RecentSearchList(
                 Text(
                     text = "최근 검색",
                     style = MaterialTheme.typography.titleSmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -267,22 +268,22 @@ fun RecentSearchList(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = TextHint, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                         Column {
-                            Text(text = item.stationName, style = MaterialTheme.typography.bodyLarge, color = TextPrimary)
+                            Text(text = item.stationName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                             Text(
                                 text = item.lineNumber.removePrefix("0"),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextHint
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                     // 터치 영역은 IconButton 기본값(48dp) 유지, 아이콘만 16dp
                     IconButton(onClick = { onDelete(item) }) {
-                        Icon(Icons.Default.Close, contentDescription = "삭제", tint = TextHint, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Close, contentDescription = "삭제", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                     }
                 }
-                HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 20.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 20.dp))
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.jonghyeok.ezegot.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 /*
  * 다크 팔레트.
@@ -80,6 +81,26 @@ fun getSubwayLineColor(lineName: String): Color {
         else -> DarkOutline // 기본 색상
     }
 }
+
+/**
+ * 노선 색 위에 얹을 글자색을 배경 휘도로 고른다.
+ *
+ * 흰 글자를 고정으로 쓰면 밝은 노선에서 읽히지 않는다. 수인분당선(#FABE00)은
+ * 1.69:1까지 떨어졌다.
+ *
+ * 팔레트의 근사 검정(DarkBackground)·근사 흰색(DarkTextPrimary) 대신 순수
+ * 검정·흰색을 쓴다. 근사색으로는 5·7호선, 경춘선, GTX-A 네 노선이 어느 쪽을
+ * 골라도 4.5:1을 못 넘겼다. 순수색이면 18개 노선 전부 4.5:1 이상이 되고,
+ * 최악(GTX-A)이 4.63:1이다.
+ *
+ * 임계 0.179는 두 선택의 명암비가 같아지는 휘도다. 이 값에서 양쪽 모두
+ * 4.58:1이라, 어떤 배경색이 와도 기준을 밑돌지 않는다.
+ */
+fun onSubwayLineColor(background: Color): Color =
+    if (background.luminance() > 0.179f) SubwayBadgeOnLight else SubwayBadgeOnDark
+
+private val SubwayBadgeOnLight = Color(0xFF000000)
+private val SubwayBadgeOnDark = Color(0xFFFFFFFF)
 
 // ─────────────────────────────────────────────────────────────────
 // 아래는 colorScheme 마이그레이션이 끝나면 삭제한다.

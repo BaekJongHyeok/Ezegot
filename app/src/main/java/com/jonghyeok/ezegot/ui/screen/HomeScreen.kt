@@ -47,7 +47,8 @@ import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.NearbyStation
 import com.jonghyeok.ezegot.dto.RealtimeArrival
-import com.jonghyeok.ezegot.ui.theme.*
+import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
+import com.jonghyeok.ezegot.ui.theme.onSubwayLineColor
 import com.jonghyeok.ezegot.viewModel.LocationState
 import com.jonghyeok.ezegot.viewModel.MainViewModel
 import java.time.LocalTime
@@ -72,7 +73,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundLight)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // ── ① 고정 상단 헤더 (항상 보임) ─────────────────────────
         StickyHeader(
@@ -100,7 +101,7 @@ fun StickyHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Navy900, Navy800)))
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         // 앱 이름 + 설정
@@ -112,11 +113,11 @@ fun StickyHeader(
             Text(
                 text = "EZEGOT",
                 style = MaterialTheme.typography.titleLarge,
-                color = TextOnDark,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Black
             )
             IconButton(onClick = onSettingsClick, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Settings, contentDescription = "설정", tint = TextOnDark.copy(alpha = 0.6f))
+                Icon(Icons.Default.Settings, contentDescription = "설정", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -133,7 +134,7 @@ fun StickyHeader(
                     role = Role.Button
                 ) { onSearchClick() },
             shape = RoundedCornerShape(12.dp),
-            color = Navy700
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
             Row(
                 modifier = Modifier
@@ -145,8 +146,8 @@ fun StickyHeader(
                 Text(
                     text = "지하철 역 이름 검색",
                     style = MaterialTheme.typography.bodyMedium,
-                    // TextHint는 밝은 배경 기준 색이라 Navy700 위에서는 대비가 부족하다
-                    color = TextOnDark.copy(alpha = 0.6f)
+                    // 검색 필드는 surfaceVariant 위에 있으므로 보조 텍스트색을 쓴다
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -155,7 +156,7 @@ fun StickyHeader(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = null,
-                        tint = TextOnDark.copy(alpha = 0.5f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -170,7 +171,7 @@ internal fun HomeTabBar(selectedTab: HomeTab, onTabSelected: (HomeTab) -> Unit) 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Navy900)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 16.dp)
     ) {
         HomeTab.entries.forEach { tab ->
@@ -186,19 +187,19 @@ internal fun HomeTabBar(selectedTab: HomeTab, onTabSelected: (HomeTab) -> Unit) 
                     text = tab.label,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) SkyBlue400 else TextOnDark.copy(alpha = 0.4f)
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
     }
 
     // 탭 하단 선택 인디케이터 – 선택된 탭 쪽으로 정렬만 바꿔 표현
-    Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Navy700)) {
+    Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(MaterialTheme.colorScheme.outline)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.5f)
                 .fillMaxHeight()
-                .background(SkyBlue400)
+                .background(MaterialTheme.colorScheme.primary)
                 .align(if (selectedTab == HomeTab.FAVORITE) Alignment.CenterStart else Alignment.CenterEnd)
         )
     }
@@ -235,7 +236,7 @@ fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Un
                 Text(
                     text = "실시간 도착 정보",
                     style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.SemiBold
                 )
                 Row(
@@ -253,10 +254,10 @@ fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Un
                 ) {
                     // 아직 한 번도 데이터가 들어오지 않았으면 시각을 보여주지 않는다
                     lastUpdatedAt?.let {
-                        Text(it.format(formatter), style = MaterialTheme.typography.labelMedium, color = TextHint)
+                        Text(it.format(formatter), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(
-                        Icons.Default.Refresh, contentDescription = "새로고침", tint = TextHint,
+                        Icons.Default.Refresh, contentDescription = "새로고침", tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp).graphicsLayer(rotationZ = animRotation)
                     )
                 }
@@ -309,7 +310,7 @@ fun FavoriteArrivalRow(
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         shadowElevation = 3.dp,
-        color = SurfaceWhite
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // 역명 + 호선 뱃지
@@ -326,7 +327,7 @@ fun FavoriteArrivalRow(
                     Text(
                         text = station.stationName,
                         style = MaterialTheme.typography.titleSmall,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -335,12 +336,12 @@ fun FavoriteArrivalRow(
                         Text(
                             text = station.lineNumber.removePrefix("0"),
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextOnDark,
+                            color = onSubwayLineColor(lineColor),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
-                Text("›", style = MaterialTheme.typography.titleMedium, color = TextHint)
+                Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             Spacer(Modifier.height(12.dp))
@@ -357,7 +358,7 @@ fun FavoriteArrivalRow(
                                 .fillMaxWidth(if (i == 0) 1f else 0.7f)
                                 .height(20.dp)
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(DividerColor)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                         )
                         if (i == 0) Spacer(Modifier.height(8.dp))
                     }
@@ -367,7 +368,7 @@ fun FavoriteArrivalRow(
                     Text(
                         text = "도착 정보 없음",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextHint
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -397,7 +398,7 @@ private fun ArrivalLine(arrival: RealtimeArrival) {
         Text(
             text = arrival.directionLabel(),
             style = MaterialTheme.typography.bodySmall,
-            color = TextHint,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).padding(end = 12.dp)
@@ -405,7 +406,7 @@ private fun ArrivalLine(arrival: RealtimeArrival) {
         Text(
             text = arrival.getFormattedMessage(),
             style = MaterialTheme.typography.headlineSmall,
-            color = ArrivalRed,
+            color = MaterialTheme.colorScheme.error,
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )
@@ -447,11 +448,11 @@ internal fun EmptyStateView(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, contentDescription = null, tint = TextHint, modifier = Modifier.size(36.dp))
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(36.dp))
             Spacer(Modifier.height(10.dp))
-            Text(title, style = MaterialTheme.typography.bodyMedium, color = TextHint)
+            Text(title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.height(4.dp))
-            Text(description, style = MaterialTheme.typography.bodySmall, color = TextHint)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -473,7 +474,7 @@ fun KtxBannerMinimal(context: Context) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Navy900.copy(alpha = 0.07f))
+            .background(MaterialTheme.colorScheme.surface)
             .clickable {
                 val intent = android.content.Intent(
                     android.content.Intent.ACTION_VIEW,
@@ -488,8 +489,8 @@ fun KtxBannerMinimal(context: Context) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("🚄  기차 / KTX 승차권 예매", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-            Text("바로가기 →", style = MaterialTheme.typography.labelSmall, color = SkyBlue400)
+            Text("🚄  기차 / KTX 승차권 예매", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("바로가기 →", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -580,7 +581,7 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                     .padding(horizontal = 32.dp),
                 shape = RoundedCornerShape(16.dp),
                 shadowElevation = 4.dp,
-                color = SurfaceWhite
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -590,13 +591,13 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                     Text(
                         text = "근처에 지하철역이 없습니다",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = "현재 위치에서 3km 안에 표시할 역이 없어요",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -615,7 +616,7 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                 val lineColor = getSubwayLineColor(station.lineNumber)
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) lineColor else SurfaceWhite,
+                    color = if (isSelected) lineColor else MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, lineColor),
                     shadowElevation = 4.dp,
                     modifier = Modifier.clickable {
@@ -634,12 +635,12 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(androidx.compose.foundation.shape.CircleShape)
-                                .background(if (isSelected) SurfaceWhite else lineColor)
+                                .background(if (isSelected) onSubwayLineColor(lineColor) else lineColor)
                         )
                         Text(
                             text = "${station.stationName} ${station.lineNumber}",
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (isSelected) SurfaceWhite else TextPrimary,
+                            color = if (isSelected) onSubwayLineColor(lineColor) else MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -665,7 +666,7 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                         .clickable { onStationClick(station.stationName, station.lineNumber) },
                     shape = RoundedCornerShape(16.dp),
                     shadowElevation = 8.dp,
-                    color = SurfaceWhite
+                    color = MaterialTheme.colorScheme.surface
                 ) {
                     val lineColor = getSubwayLineColor(station.lineNumber)
                     Row(
@@ -696,14 +697,14 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                                     Text(
                                         text = station.stationName,
                                         style = MaterialTheme.typography.titleLarge,
-                                        color = TextPrimary,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Surface(shape = RoundedCornerShape(6.dp), color = lineColor) {
                                         Text(
                                             text = station.lineNumber,
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = TextOnDark,
+                                            color = onSubwayLineColor(lineColor),
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
@@ -712,18 +713,18 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                                 Text(
                                     text = String.format("내 위치에서 %.1f km", station.distance),
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = TextSecondary
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Navy900
+                            color = MaterialTheme.colorScheme.primary
                         ) {
                             Text(
                                 text = "상세 정보",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = TextOnDark,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                             )
                         }
@@ -747,7 +748,7 @@ fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName:
             modifier = Modifier
                 .size(baseSize)
                 .shadow(if (isSelected) 8.dp else 4.dp, androidx.compose.foundation.shape.CircleShape)
-                .background(SurfaceWhite, androidx.compose.foundation.shape.CircleShape)
+                .background(MaterialTheme.colorScheme.surface, androidx.compose.foundation.shape.CircleShape)
                 .padding(strokeWidth / 2), // Space for stroke
             contentAlignment = Alignment.Center
         ) {
@@ -777,7 +778,7 @@ fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName:
                     // 환승역 여부가 이 아이콘 모양으로만 전달되고 있었다
                     contentDescription = "환승역",
                     modifier = Modifier.size(baseSize * 0.5f),
-                    tint = Navy900
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             } else {
                 // Single line icon or dot
@@ -785,7 +786,7 @@ fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName:
                     modifier = Modifier
                         .size(baseSize * 0.3f)
                         .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(lineColors.firstOrNull() ?: SkyBlue400)
+                        .background(lineColors.firstOrNull() ?: MaterialTheme.colorScheme.primary)
                 )
             }
         }
@@ -800,14 +801,14 @@ fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName:
 
             Surface(
                 shape = RoundedCornerShape(4.dp),
-                color = SurfaceWhite.copy(alpha = 0.9f),
+                color = MaterialTheme.colorScheme.surface,
                 border = borderStroke,
                 shadowElevation = 2.dp
             ) {
                 Text(
                     text = stationName,
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                 )
@@ -828,11 +829,11 @@ fun LocationLoadingCard() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CircularProgressIndicator(color = SkyBlue400, modifier = Modifier.size(36.dp))
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
             Text(
                 text = "위치를 확인하는 중",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -849,24 +850,24 @@ fun LocationUnavailableCard(onRetry: () -> Unit) {
             modifier = Modifier.fillMaxWidth(0.85f),
             shape = RoundedCornerShape(16.dp),
             shadowElevation = 4.dp,
-            color = SurfaceWhite
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = TextHint, modifier = Modifier.size(36.dp))
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(36.dp))
                 Text(
                     text = "위치를 가져올 수 없습니다",
                     style = MaterialTheme.typography.titleSmall,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = "실내에서는 신호가 약할 수 있어요. GPS가 켜져 있는지 확인해 주세요",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Surface(
                     modifier = Modifier
@@ -874,13 +875,13 @@ fun LocationUnavailableCard(onRetry: () -> Unit) {
                         .clickable { onRetry() }
                         .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),
                     shape = RoundedCornerShape(8.dp),
-                    color = SkyBlue400
+                    color = MaterialTheme.colorScheme.primary
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = "다시 시도",
                             style = MaterialTheme.typography.labelMedium,
-                            color = TextOnDark,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
@@ -912,34 +913,34 @@ fun LocationGuideCard(isPermissionGranted: Boolean) {
                 },
             shape = RoundedCornerShape(16.dp),
             shadowElevation = 4.dp,
-            color = SurfaceWhite
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = SkyBlue400, modifier = Modifier.size(36.dp))
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
                 Text(
                     text = if (!isPermissionGranted) "위치 권한 필요" else "GPS를 켜주세요",
                     style = MaterialTheme.typography.titleSmall,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = if (!isPermissionGranted) "근처 역을 보려면 위치 권한을 허용해 주세요"
                            else "GPS를 활성화하면 주변 역 정보를 확인할 수 있어요",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = SkyBlue400
+                    color = MaterialTheme.colorScheme.primary
                 ) {
                     Text(
                         text = "설정으로 이동",
                         style = MaterialTheme.typography.labelMedium,
-                        color = TextOnDark,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
