@@ -1,5 +1,6 @@
 package com.jonghyeok.ezegot.viewModel
 
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.BasicStationInfo
@@ -30,7 +31,7 @@ class MainViewModel @Inject constructor(
     private val mainRepository: MainRepository,
     private val favoriteRepository: FavoriteRepository,
     private val locationRepository: LocationRepository
-) : BaseViewModel() {
+) : ViewModel() {
 
     // ── 즐겨찾기 ─────────────────────────────────────────────────
     val favoriteStationList: StateFlow<List<BasicStationInfo>> = favoriteRepository.favorites
@@ -63,7 +64,6 @@ class MainViewModel @Inject constructor(
     private fun loadInitialData() {
         viewModelScope.launch {
             val stationsDeferred  = launch { mainRepository.getAllStations().let { s ->
-                setAllStations(s)
                 stationNameMap = s.groupBy { it.stationName }
             }}
             val locationsDeferred = launch { mainRepository.getStationsLocation().also { locationsCache = it } }

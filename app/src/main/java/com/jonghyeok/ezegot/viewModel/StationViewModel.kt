@@ -1,5 +1,6 @@
 package com.jonghyeok.ezegot.viewModel
 
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.jonghyeok.ezegot.alarm.SubwayAlarmManager
@@ -26,7 +27,7 @@ class StationViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
     private val alarmManager: SubwayAlarmManager,
     private val alarmDao: SubwayAlarmDao
-) : BaseViewModel() {
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StationUiState())
     val uiState: StateFlow<StationUiState> = _uiState.asStateFlow()
