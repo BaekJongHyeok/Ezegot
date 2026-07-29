@@ -1,12 +1,13 @@
 package com.jonghyeok.ezegot.repository
 
+import android.content.Context
 import android.location.Geocoder
 import android.util.Log
-import com.jonghyeok.ezegot.MyApplication
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.di.ApiKeys
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -25,6 +26,7 @@ class StationRepository @Inject constructor(
     @Named("realtimeArrivalApi") private val realtimeApi: SubwayApiService,
     @Named("extendedApi") private val extendedApi: SubwayApiService,
     @Named("stationInfoApi") private val stationInfoApi: SubwayApiService,
+    @ApplicationContext private val context: Context,
     private val apiKeys: ApiKeys,
     private val mainRepository: MainRepository  // 위치 목록 캐시 공유
 ) {
@@ -99,7 +101,7 @@ class StationRepository @Inject constructor(
     suspend fun getAddress(lat: Double, lon: Double): String =
         withContext(Dispatchers.IO) {
             runCatching {
-                val geocoder = Geocoder(MyApplication.context, Locale.getDefault())
+                val geocoder = Geocoder(context, Locale.getDefault())
                 @Suppress("DEPRECATION")
                 geocoder.getFromLocation(lat, lon, 1)
                     ?.firstOrNull()
