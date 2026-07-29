@@ -66,13 +66,18 @@ private fun RealtimeArrival.hasLeft(clock: Clock): Boolean {
     val message = getFormattedMessage()
     if (message != "도착" && message != "진입" && message != "곧 도착") return false
 
+    // recptnDt에는 타임존이 없다. 서울 열린데이터 광장이 주는 값이라 항상 KST다.
+    // 기기 타임존으로 읽으면 해외에서 시차만큼 통째로 어긋나고, 테스트도 실행
+    // 환경(CI는 UTC)에 따라 결과가 달라진다. 순간(Instant)으로 바꿔 비교한다.
     val received = runCatching {
-        LocalDateTime.parse(receptionTime, RECEPTION_FORMAT)
+        LocalDateTime.parse(receptionTime, RECEPTION_FORMAT).atZone(SEOUL).toInstant()
     }.getOrNull() ?: return false
 
-    val now = LocalDateTime.now(clock.withZone(ZoneId.systemDefault()))
-    return Duration.between(received, now) >= DEPARTED_THRESHOLD
+    return Duration.between(received, clock.instant()) >= DEPARTED_THRESHOLD
 }
+
+/** 실시간 도착 API의 시각은 타임존 표기 없이 항상 한국 시간으로 온다 */
+private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 
 /**
  * 화면에 찍히는 추정 분.
