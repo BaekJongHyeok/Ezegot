@@ -201,7 +201,7 @@ fun StationScreen(
 
                     // 첫차 / 막차 시간표 (로딩 중에도 카드 틀은 유지)
                     val (upTable, dnTable) = timeTable ?: Pair(null, null)
-                    StationTimeTableCard(upTable, dnTable, upDtLabel, dnDtLabel)
+                    StationTimeTableCard(upTable, dnTable, upDtLabel, dnDtLabel, uiState.errorMessage)
                     Spacer(Modifier.height(16.dp))
                 }
 

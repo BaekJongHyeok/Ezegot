@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.jonghyeok.ezegot.api.TimeTableResponse
 import com.jonghyeok.ezegot.api.TimeTableSchedule
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.ui.theme.ArrivalRed
 import com.jonghyeok.ezegot.ui.theme.Navy800
 import com.jonghyeok.ezegot.ui.theme.Navy900
 import com.jonghyeok.ezegot.ui.theme.SurfaceWhite
@@ -83,13 +84,21 @@ internal fun getUpcomingTrainsFromTimeTable(schedules: List<TimeTableSchedule>):
     }
 }
 
-/** 첫차 / 막차 시간표 카드. 아직 로딩 중이면 카드 틀만 유지한 채 placeholder를 보여준다. */
+/**
+ * 첫차 / 막차 시간표 카드.
+ *
+ * 표시 우선순위:
+ * 1. [errorMessage]가 있으면 실패 안내 (조회를 시도했으나 상·하행 모두 못 받은 경우)
+ * 2. 응답은 왔는데 상·하행 모두 비어 있으면 미제공 노선 안내
+ * 3. 그 외에는 방향별 첫차·막차. `up`/`down`이 null이면 아직 로딩 중이라 placeholder를 보여준다.
+ */
 @Composable
 internal fun StationTimeTableCard(
     up: TimeTableResponse?,
     down: TimeTableResponse?,
     upDtLabel: String,
-    dnDtLabel: String
+    dnDtLabel: String,
+    errorMessage: String? = null
 ) {
     Surface(
         modifier = Modifier
@@ -110,7 +119,24 @@ internal fun StationTimeTableCard(
             val upEmpty = up?.schedules?.isEmpty() ?: false
             val downEmpty = down?.schedules?.isEmpty() ?: false
 
-            if (up != null && down != null && upEmpty && downEmpty) {
+            if (errorMessage != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ArrivalRed,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "네트워크 상태를 확인한 뒤 다시 들어와 주세요.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            } else if (up != null && down != null && upEmpty && downEmpty) {
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = "해당 노선(코레일 등)은 서울 공공데이터에서 시간표를 제공하지 않습니다.",

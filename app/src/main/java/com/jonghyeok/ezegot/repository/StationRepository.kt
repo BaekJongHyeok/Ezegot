@@ -1,6 +1,7 @@
 package com.jonghyeok.ezegot.repository
 
 import android.location.Geocoder
+import android.util.Log
 import com.jonghyeok.ezegot.MyApplication
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.api.SubwayApiService
@@ -163,7 +164,7 @@ class StationRepository @Inject constructor(
                             }
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e(TAG, "TAGO 역 목록 파싱 실패: $cleanName", e)
                     }
                 }
 
@@ -218,8 +219,12 @@ class StationRepository @Inject constructor(
                 com.jonghyeok.ezegot.api.TimeTableResponse(schedules)
             } else null
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "TAGO 시간표 파싱 실패: nodeId=$nodeId, $upDownCode", e)
             null
         }
+    }
+
+    private companion object {
+        const val TAG = "StationRepository"
     }
 }
