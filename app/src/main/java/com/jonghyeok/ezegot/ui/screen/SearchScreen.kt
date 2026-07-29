@@ -39,7 +39,8 @@ import com.jonghyeok.ezegot.viewModel.SearchViewModel
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
-    onStationClick: (String, String) -> Unit
+    onStationClick: (String, String) -> Unit,
+    onBack: () -> Unit
 ) {
     val textState by viewModel.textState.collectAsState()
     val filteredStations by viewModel.filteredStations.collectAsState()
@@ -65,13 +66,24 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                // 뒤로가기 IconButton이 48dp라 좌측 여백은 버튼이 대신한다
+                .padding(start = 4.dp, top = 14.dp, end = 16.dp, bottom = 14.dp)
         ) {
-            // 탭으로 들어오므로 뒤로가기 버튼이 없다
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // 탭으로 들어와도 홈이 스택 아래에 있어 시스템 뒤로가기와 같은 곳으로 간다.
+                // 키보드가 올라와 있으면 시스템 뒤로가기는 키보드부터 내리므로,
+                // 화면을 벗어나려면 두 번 눌러야 한다. 이 버튼은 한 번에 나간다.
+                IconButton(onClick = { keyboardController?.hide(); onBack() }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "뒤로",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
                 Surface(
                     modifier = Modifier
                         .weight(1f)
