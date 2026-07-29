@@ -4,59 +4,50 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
 /*
- * 다크 팔레트.
- *
- * 위젯(ArrivalWidget)이 쓰던 색을 앱 전체의 기준으로 삼았다. 앱 상단만 네이비이고
- * 본문은 밝던 구조를 없애, 앱과 위젯이 같은 시각 언어를 쓰게 한다.
- *
- * 이름에 밝기를 넣지 않는다. 예전 SurfaceWhite / BackgroundLight / TextOnDark는
- * 이름이 값을 못 박고 있어서 팔레트를 바꾸는 순간 이름이 거짓이 됐다.
- * 접두사 Dark는 "어떤 팔레트에 속하는가"를 가리키며, 라이트 팔레트를 추가하면
- * Light* 한 벌을 더 만들고 Theme.kt에서 고르기만 하면 된다.
+ * 라이트 팔레트.
  *
  * 화면 코드는 이 값들을 직접 쓰지 않는다. MaterialTheme.colorScheme만 참조한다.
- * 유일한 예외는 노선 공식 색인 [getSubwayLineColor]다.
+ * 유일한 예외는 노선 공식 색인 [getSubwayLineColor], [onSubwayLineColor]다.
+ *
+ * 팔레트를 한 벌 더 만들고 Theme.kt에서 고르기만 하면 다른 테마를 추가할 수 있다.
+ * 화면 코드는 손대지 않아도 된다.
  */
 
 // ── 바탕 ────────────────────────────────────────────────────────
 /** 화면 바탕 */
-val DarkBackground = Color(0xFF0C1624)
+val LightBackground = Color(0xFFFFFFFF)
 
-/** 바탕 위 한 단계. 헤더·카드·리스트 배경 */
-val DarkSurface = Color(0xFF16273A)
+/** 카드·섹션 배경. 바탕과 1.05:1이라 경계는 [LightOutline]이 맡는다 */
+val LightSurface = Color(0xFFF8FAFC)
 
-/** 표면 위 한 단계. 입력 필드·칩처럼 눌러지는 것 */
-val DarkSurfaceElevated = Color(0xFF1C2E40)
-
-/** 구분선·테두리. 다크에서는 그림자가 보이지 않아 경계를 이 색이 맡는다 */
-val DarkOutline = Color(0xFF2E4560)
+/** 구분선·테두리 */
+val LightOutline = Color(0xFFE2E8F0)
 
 // ── 텍스트 ──────────────────────────────────────────────────────
-/** 주 텍스트. 바탕 대비 16.6:1 */
-val DarkTextPrimary = Color(0xFFF0F5FF)
+/** 주 텍스트. 바탕 대비 17.9:1 */
+val LightTextPrimary = Color(0xFF0F172A)
 
-/** 보조 텍스트. 바탕 대비 8.3:1 */
-val DarkTextSecondary = Color(0xFF8EB4D4)
+/** 보조 텍스트. 바탕 대비 4.76:1 */
+val LightTextSecondary = Color(0xFF64748B)
 
-/** 비활성·지난 정보. 바탕 대비 3.6:1 — 본문용이 아니라 부차 정보용 */
-val DarkTextDisabled = Color(0xFF4A7291)
+/** 비활성·지난 정보. 바탕 대비 2.6:1 — 본문용이 아니다 */
+val LightTextDisabled = Color(0xFF94A3B8)
 
 // ── 강조 ────────────────────────────────────────────────────────
-/** 브랜드 액센트. 탭 선택, 링크, 아이콘. 바탕 대비 10.9:1 */
-val DarkAccent = Color(0xFF4DD9F5)
+/** 브랜드·선택·링크. 바탕 대비 5.17:1 */
+val LightAccent = Color(0xFF2563EB)
 
 /**
- * 도착 임박.
+ * 도착 임박 전용. 바탕 대비 4.83:1
  *
- * 액센트와 분리한 이유는, 브랜드색과 긴급색이 같으면 둘 다 의미를 잃기 때문이다.
- * 기존 ArrivalRed(#EF5350)보다 밝혀 어두운 바탕에서 6.6:1을 확보했다.
+ * 브랜드색과 분리한 이유는, 둘이 같으면 어느 쪽도 강조로 기능하지 않기 때문이다.
  */
-val DarkUrgent = Color(0xFFFF6B6B)
+val LightUrgent = Color(0xFFDC2626)
 
 // ── 지하철 호선 색상 ────────────────────────────────────────────
 /**
  * 노선 공식 색. 팔레트와 무관하게 고정이므로 화면에서 직접 쓰는 유일한 예외다.
- * 이 색 위에 얹을 글자색은 배경 휘도로 자동 선택한다([onSubwayLineColor]).
+ * 이 색 위에 얹을 글자색은 [onSubwayLineColor]가 배경 휘도로 고른다.
  */
 fun getSubwayLineColor(lineName: String): Color {
     return when (lineName) {
@@ -78,69 +69,25 @@ fun getSubwayLineColor(lineName: String): Color {
         "경강선" -> Color(0xFF003DA5)
         "서해선" -> Color(0xFF81A914)
         "GTX-A" -> Color(0xFF9A6292)
-        else -> DarkOutline // 기본 색상
+        else -> LightTextSecondary // 기본 색상
     }
 }
 
 /**
  * 노선 색 위에 얹을 글자색을 배경 휘도로 고른다.
  *
- * 흰 글자를 고정으로 쓰면 밝은 노선에서 읽히지 않는다. 수인분당선(#FABE00)은
- * 1.69:1까지 떨어졌다.
+ * 흰 글자를 고정으로 쓰면 밝은 노선에서 읽히지 않는다. 수인분당선(#FABE00) 위
+ * 흰 글씨는 1.69:1이었다.
  *
- * 팔레트의 근사 검정(DarkBackground)·근사 흰색(DarkTextPrimary) 대신 순수
- * 검정·흰색을 쓴다. 근사색으로는 5·7호선, 경춘선, GTX-A 네 노선이 어느 쪽을
- * 골라도 4.5:1을 못 넘겼다. 순수색이면 18개 노선 전부 4.5:1 이상이 되고,
- * 최악(GTX-A)이 4.63:1이다.
+ * 팔레트의 TextPrimary·Background 대신 순수 검정·흰색을 쓴다. 팔레트 색으로는
+ * 일부 노선이 어느 쪽을 골라도 4.5:1을 못 넘긴다. 순수색이면 18개 노선 전부
+ * 4.5:1 이상이 되고 최악(GTX-A)이 4.63:1이다.
  *
- * 임계 0.179는 두 선택의 명암비가 같아지는 휘도다. 이 값에서 양쪽 모두
- * 4.58:1이라, 어떤 배경색이 와도 기준을 밑돌지 않는다.
+ * 임계 0.179는 두 선택의 명암비가 같아지는 휘도다. 이 값에서 양쪽 모두 4.58:1이라
+ * 어떤 배경색이 와도 기준을 밑돌지 않는다.
  */
 fun onSubwayLineColor(background: Color): Color =
     if (background.luminance() > 0.179f) SubwayBadgeOnLight else SubwayBadgeOnDark
 
 private val SubwayBadgeOnLight = Color(0xFF000000)
 private val SubwayBadgeOnDark = Color(0xFFFFFFFF)
-
-// ─────────────────────────────────────────────────────────────────
-// 아래는 colorScheme 마이그레이션이 끝나면 삭제한다.
-// 화면 13개를 한 번에 고치면 중간 빌드가 불가능해, 파일 단위로 옮기는 동안만 남겨둔다.
-// ─────────────────────────────────────────────────────────────────
-@Deprecated("MaterialTheme.colorScheme를 쓸 것", ReplaceWith("MaterialTheme.colorScheme.surface"))
-val Navy900 = Color(0xFF0D1B2A)
-
-@Deprecated("MaterialTheme.colorScheme를 쓸 것")
-val Navy800 = Color(0xFF1A2D42)
-
-@Deprecated("MaterialTheme.colorScheme를 쓸 것")
-val Navy700 = Color(0xFF243D57)
-
-@Deprecated("MaterialTheme.colorScheme.primary를 쓸 것")
-val SkyBlue400 = Color(0xFF4FC3F7)
-
-@Deprecated("MaterialTheme.colorScheme.primary를 쓸 것")
-val SkyBlue300 = Color(0xFF81D4FA)
-
-@Deprecated("MaterialTheme.colorScheme.background를 쓸 것")
-val BackgroundLight = Color(0xFFF7F9FC)
-
-@Deprecated("MaterialTheme.colorScheme.surface를 쓸 것")
-val SurfaceWhite = Color(0xFFFFFFFF)
-
-@Deprecated("MaterialTheme.colorScheme.onSurface를 쓸 것")
-val TextPrimary = Color(0xFF0D1B2A)
-
-@Deprecated("MaterialTheme.colorScheme.onSurfaceVariant를 쓸 것")
-val TextSecondary = Color(0xFF546E7A)
-
-@Deprecated("MaterialTheme.colorScheme.tertiary를 쓸 것")
-val TextHint = Color(0xFF5C7A88)
-
-@Deprecated("MaterialTheme.colorScheme.onPrimary를 쓸 것")
-val TextOnDark = Color(0xFFFFFFFF)
-
-@Deprecated("MaterialTheme.colorScheme.error를 쓸 것")
-val ArrivalRed = Color(0xFFEF5350)
-
-@Deprecated("MaterialTheme.colorScheme.outline를 쓸 것")
-val DividerColor = Color(0xFFECEFF1)

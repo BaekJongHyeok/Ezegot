@@ -22,10 +22,6 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.jonghyeok.ezegot.api.StationInfoResponse
-import com.jonghyeok.ezegot.ui.theme.SurfaceWhite
-import com.jonghyeok.ezegot.ui.theme.TextHint
-import com.jonghyeok.ezegot.ui.theme.TextPrimary
-import com.jonghyeok.ezegot.ui.theme.TextSecondary
 
 /** 역 위치를 보여주는 지도 카드. */
 @Composable
@@ -36,13 +32,13 @@ internal fun StationMapCard(stationLocation: StationInfoResponse) {
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(16.dp),
         shadowElevation = 3.dp,
-        color = SurfaceWhite
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "역 위치",
                 style = MaterialTheme.typography.titleSmall,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(12.dp))
@@ -74,13 +70,13 @@ internal fun StationInfoCard(address: String) {
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(16.dp),
         shadowElevation = 3.dp,
-        color = SurfaceWhite
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "역 정보",
                 style = MaterialTheme.typography.titleSmall,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(12.dp))
@@ -99,13 +95,13 @@ private fun InfoRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = TextHint,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(80.dp)
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

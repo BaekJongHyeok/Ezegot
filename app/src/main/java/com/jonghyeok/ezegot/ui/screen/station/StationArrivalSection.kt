@@ -26,11 +26,6 @@ import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.api.TimeTableResponse
 import com.jonghyeok.ezegot.db.SubwayAlarmEntity
 import com.jonghyeok.ezegot.dto.RealtimeArrival
-import com.jonghyeok.ezegot.ui.theme.DividerColor
-import com.jonghyeok.ezegot.ui.theme.Navy800
-import com.jonghyeok.ezegot.ui.theme.SurfaceWhite
-import com.jonghyeok.ezegot.ui.theme.TextHint
-import com.jonghyeok.ezegot.ui.theme.TextPrimary
 
 /**
  * 열차 도착 정보 섹션.
@@ -90,14 +85,14 @@ internal fun ArrivalInfoSection(
             Text(
                 text = "열차 도착 정보",
                 style = MaterialTheme.typography.titleSmall,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "실시간",
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isRealtime) Navy800 else TextHint,
+                    color = if (isRealtime) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.tertiary,
                     fontWeight = if (isRealtime) FontWeight.Bold else FontWeight.Normal
                 )
                 Switch(
@@ -105,18 +100,18 @@ internal fun ArrivalInfoSection(
                     onCheckedChange = { isRealtime = !it },
                     modifier = Modifier.padding(horizontal = 6.dp).scale(0.75f),
                     colors = SwitchDefaults.colors(
-                        // 썸은 텍스트가 아니라 표면이라 SurfaceWhite를 쓴다 (값은 동일)
-                        checkedThumbColor = SurfaceWhite,
-                        checkedTrackColor = Navy800,
-                        uncheckedThumbColor = SurfaceWhite,
-                        // 텍스트 토큰(TextHint)을 쓰면 꺼짐 트랙이 어두워져 켜짐처럼 보인다
-                        uncheckedTrackColor = DividerColor
+                        // 썸은 표면이라 onPrimary(흰색)를 쓴다
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        // 꺼짐 트랙은 중립 회색이어야 켜짐과 구분된다
+                        uncheckedTrackColor = MaterialTheme.colorScheme.outline
                     )
                 )
                 Text(
                     text = "시간표",
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (!isRealtime) Navy800 else TextHint,
+                    color = if (!isRealtime) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.tertiary,
                     fontWeight = if (!isRealtime) FontWeight.Bold else FontWeight.Normal
                 )
             }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,7 +36,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
-import com.jonghyeok.ezegot.ui.theme.BackgroundLight
 import com.jonghyeok.ezegot.viewModel.StationViewModel
 
 /**
@@ -120,7 +120,7 @@ fun StationScreen(
         viewModel.loadStationLocation(stationName)
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         StationTopBar(
             stationName = stationName,
             lineNumber = lineNumber,

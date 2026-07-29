@@ -47,16 +47,6 @@ import androidx.compose.ui.unit.sp
 import com.jonghyeok.ezegot.api.TimeTableSchedule
 import com.jonghyeok.ezegot.db.SubwayAlarmEntity
 import com.jonghyeok.ezegot.dto.RealtimeArrival
-import com.jonghyeok.ezegot.ui.theme.ArrivalRed
-import com.jonghyeok.ezegot.ui.theme.Navy700
-import com.jonghyeok.ezegot.ui.theme.Navy800
-import com.jonghyeok.ezegot.ui.theme.Navy900
-import com.jonghyeok.ezegot.ui.theme.SkyBlue400
-import com.jonghyeok.ezegot.ui.theme.SurfaceWhite
-import com.jonghyeok.ezegot.ui.theme.TextHint
-import com.jonghyeok.ezegot.ui.theme.TextOnDark
-import com.jonghyeok.ezegot.ui.theme.TextPrimary
-import com.jonghyeok.ezegot.ui.theme.TextSecondary
 
 /**
  * 한 방면(상행 또는 하행)의 도착 카드.
@@ -81,7 +71,7 @@ internal fun ArrivalCard(
     if (showSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
-            containerColor = SurfaceWhite,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
         ) {
             FullTimetableSheet(destination, fullSchedules) { showSheet = false }
@@ -102,7 +92,7 @@ internal fun ArrivalCard(
                                 selectedArrivalForAlarm = null
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Navy800)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Text("${min}분 전")
                         }
@@ -111,10 +101,10 @@ internal fun ArrivalCard(
             },
             dismissButton = {
                 TextButton(onClick = { selectedArrivalForAlarm = null }) {
-                    Text("취소", color = TextSecondary)
+                    Text("취소", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            containerColor = SurfaceWhite,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp)
         )
     }
@@ -123,7 +113,7 @@ internal fun ArrivalCard(
         modifier = modifier.wrapContentHeight(),
         shape = RoundedCornerShape(16.dp),
         shadowElevation = 3.dp,
-        color = SurfaceWhite
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(modifier = Modifier.padding(top = 16.dp)) {
             // 도착 정보 및 버튼 외 다른 콘텐츠는 16dp 패딩 적용
@@ -133,7 +123,7 @@ internal fun ArrivalCard(
                 Text(
                     text = "$displayDestination 방면",
                     style = MaterialTheme.typography.titleSmall,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -156,7 +146,7 @@ internal fun ArrivalCard(
                                 Text(
                                     text = arrival.bstatnNm,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -164,12 +154,12 @@ internal fun ArrivalCard(
                                     Spacer(Modifier.width(4.dp))
                                     Surface(
                                         shape = RoundedCornerShape(3.dp),
-                                        color = ArrivalRed.copy(alpha = 0.15f)
+                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
                                     ) {
                                         Text(
                                             text = "급행",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = ArrivalRed,
+                                            color = MaterialTheme.colorScheme.error,
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                         )
@@ -181,7 +171,7 @@ internal fun ArrivalCard(
                         Text(
                             text = arrival.getFormattedMessage(),
                             style = MaterialTheme.typography.bodySmall,
-                            color = ArrivalRed,
+                            color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.SemiBold
                         )
 
@@ -201,7 +191,7 @@ internal fun ArrivalCard(
                                     imageVector = if (isAlarmSet) Icons.Default.Notifications else Icons.Default.NotificationsNone,
                                     // 켜짐/꺼짐이 아이콘 모양으로만 구분돼 있어 상태를 문구로 구분한다
                                     contentDescription = if (isAlarmSet) "알람 해제" else "알람 설정",
-                                    tint = if (isAlarmSet) SkyBlue400 else TextHint,
+                                    tint = if (isAlarmSet) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -222,53 +212,37 @@ internal fun ArrivalCard(
                         Text(
                             text = if (displayArrivals.isEmpty() && it == 0) "도착 정보 없음" else " ",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextHint
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Spacer(Modifier.height(4.dp))
                 }
             }
 
-            // 시간표 버튼: 카드 양 끝에서 8dp 간격 확보 (상시 노출)
-            Surface(
+            // 시간표 진입점. 부차 기능이라 채움 버튼이 아닌 텍스트 링크로 둔다
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .clickable { showSheet = true },
-                color = Color.Transparent,
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, TextOnDark.copy(alpha = 0.12f)),
-                shadowElevation = 8.dp
+                    .clickable { showSheet = true }
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Brush.horizontalGradient(listOf(Navy900, Navy700)))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "시간표 전체보기",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = TextOnDark,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = TextOnDark
-                        )
-                    }
-                }
+                Text(
+                    text = "시간표 전체보기",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
             Spacer(Modifier.height(8.dp))
         }

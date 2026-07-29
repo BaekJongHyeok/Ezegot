@@ -21,12 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.jonghyeok.ezegot.ui.theme.Navy700
-import com.jonghyeok.ezegot.ui.theme.Navy900
-import com.jonghyeok.ezegot.ui.theme.SkyBlue400
-import com.jonghyeok.ezegot.ui.theme.TextOnDark
 import com.jonghyeok.ezegot.viewModel.SplashViewModel
 import kotlinx.coroutines.delay
 
@@ -59,7 +56,7 @@ fun SplashScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(listOf(Navy900, Navy700))
+                SolidColor(MaterialTheme.colorScheme.background)
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -71,13 +68,13 @@ fun SplashScreen(
             Text(
                 text = "EZEGOT",
                 style = MaterialTheme.typography.displayMedium,
-                color = TextOnDark
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "실시간 지하철 정보",
                 style = MaterialTheme.typography.titleMedium,
-                color = SkyBlue400
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

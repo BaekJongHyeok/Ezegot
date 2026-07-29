@@ -36,18 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jonghyeok.ezegot.api.TimeTableSchedule
-import com.jonghyeok.ezegot.ui.theme.ArrivalRed
-import com.jonghyeok.ezegot.ui.theme.BackgroundLight
-import com.jonghyeok.ezegot.ui.theme.DividerColor
-import com.jonghyeok.ezegot.ui.theme.Navy800
-import com.jonghyeok.ezegot.ui.theme.Navy900
-import com.jonghyeok.ezegot.ui.theme.SkyBlue300
-import com.jonghyeok.ezegot.ui.theme.SkyBlue400
-import com.jonghyeok.ezegot.ui.theme.SurfaceWhite
-import com.jonghyeok.ezegot.ui.theme.TextHint
-import com.jonghyeok.ezegot.ui.theme.TextOnDark
-import com.jonghyeok.ezegot.ui.theme.TextPrimary
-import com.jonghyeok.ezegot.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
 /**
@@ -88,20 +76,20 @@ internal fun FullTimetableSheet(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Navy900, Navy800)))
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(horizontal = 24.dp, vertical = 22.dp)
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = SkyBlue400.copy(alpha = 0.18f)
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                     ) {
                         Text(
                             text = direction,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = SkyBlue300,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
@@ -110,7 +98,7 @@ internal fun FullTimetableSheet(
                         "하루 시간표",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = TextOnDark
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -121,7 +109,7 @@ internal fun FullTimetableSheet(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("🚇", style = MaterialTheme.typography.displaySmall)
                     Spacer(Modifier.height(12.dp))
-                    Text("시간표 정보가 없습니다", style = MaterialTheme.typography.bodyLarge, color = TextHint)
+                    Text("시간표 정보가 없습니다", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
@@ -138,7 +126,7 @@ internal fun FullTimetableSheet(
                 state = tabRowState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(SurfaceWhite)
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(vertical = 12.dp, horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -147,8 +135,8 @@ internal fun FullTimetableSheet(
                     val isCurrent = hour == currentHour
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = if (isCurrent) Navy800 else BackgroundLight,
-                        border = if (!isCurrent) BorderStroke(1.dp, DividerColor) else null,
+                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                        border = if (!isCurrent) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
                         modifier = Modifier.clickable {
                             coroutineScope.launch {
                                 // 탭 클릭 → 리스트 해당 시간대로 스크롤
@@ -162,13 +150,13 @@ internal fun FullTimetableSheet(
                             text = "${hour}시",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isCurrent) TextOnDark else TextPrimary,
+                            color = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
                 }
             }
-            HorizontalDivider(color = DividerColor, thickness = 1.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
             // 처음 열릴 때, 현재 시간대로 탭 및 리스트 동시 스크롤
             LaunchedEffect(grouped) {
@@ -205,15 +193,15 @@ internal fun FullTimetableSheet(
                                     "${hour}시",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = if (isCurrentHour) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                    color = if (isPastHour) TextHint else Navy900
+                                    color = if (isPastHour) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
                                 )
                                 if (isCurrentHour) {
                                     Spacer(Modifier.width(8.dp))
-                                    Surface(shape = RoundedCornerShape(20.dp), color = ArrivalRed) {
+                                    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.error) {
                                         Text(
                                             "NOW",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = TextOnDark,
+                                            color = MaterialTheme.colorScheme.onError,
                                             fontWeight = FontWeight.ExtraBold,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                         )
@@ -239,21 +227,21 @@ internal fun FullTimetableSheet(
                                     schedules.firstOrNull { it.leftTime >= nowHHmmss }?.leftTime == schedule.leftTime
 
                                 val chipBg = when {
-                                    isNext  -> Navy800
+                                    isNext  -> MaterialTheme.colorScheme.primary
                                     isPast  -> Color(0xFFEEEEEE)
-                                    else    -> SurfaceWhite
+                                    else    -> MaterialTheme.colorScheme.background
                                 }
                                 val timeColor = when {
-                                    isNext -> SkyBlue300
-                                    isPast -> TextHint
-                                    else   -> TextPrimary
+                                    isNext -> MaterialTheme.colorScheme.onPrimary
+                                    isPast -> MaterialTheme.colorScheme.tertiary
+                                    else   -> MaterialTheme.colorScheme.onSurface
                                 }
                                 val destColor = when {
-                                    isNext -> TextOnDark.copy(alpha = 0.75f)
+                                    isNext -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                                     // alpha 0.55를 얹으면 실효 명암비가 2:1 아래로 떨어져 읽을 수 없다.
                                     // 지난 열차라는 것은 칩 배경색만으로 충분히 구분된다.
-                                    isPast -> TextHint
-                                    else   -> TextSecondary
+                                    isPast -> MaterialTheme.colorScheme.tertiary
+                                    else   -> MaterialTheme.colorScheme.onSurfaceVariant
                                 }
 
                                 Surface(
@@ -282,7 +270,7 @@ internal fun FullTimetableSheet(
                                                     Text(
                                                         text = "급행",
                                                         style = MaterialTheme.typography.labelSmall,
-                                                        color = ArrivalRed,
+                                                        color = MaterialTheme.colorScheme.error,
                                                         fontWeight = FontWeight.Bold,
                                                         modifier = Modifier.padding(end = 4.dp)
                                                     )
@@ -299,7 +287,7 @@ internal fun FullTimetableSheet(
                                 }
                             }
                         }
-                        HorizontalDivider(color = DividerColor.copy(alpha = 0.5f), thickness = 0.5.dp)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                     }
                 }
             }

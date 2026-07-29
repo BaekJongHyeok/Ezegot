@@ -35,11 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.dto.RealtimeArrival
-import com.jonghyeok.ezegot.ui.theme.Navy800
-import com.jonghyeok.ezegot.ui.theme.Navy900
-import com.jonghyeok.ezegot.ui.theme.SkyBlue400
-import com.jonghyeok.ezegot.ui.theme.TextOnDark
 import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
+import com.jonghyeok.ezegot.ui.theme.onSubwayLineColor
 
 /**
  * 역 상세 상단 바.
@@ -60,7 +57,7 @@ internal fun StationTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Navy900, Navy800)))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.padding(bottom = 48.dp)) {
             Row(
@@ -70,14 +67,14 @@ internal fun StationTopBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = TextOnDark)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onToggleFavorite) {
                     Icon(
                         if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                         contentDescription = "즐겨찾기",
-                        tint = if (isFavorite) SkyBlue400 else TextOnDark.copy(alpha = 0.6f)
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -89,7 +86,7 @@ internal fun StationTopBar(
                     Text(
                         text = stationName,
                         style = MaterialTheme.typography.headlineLarge,
-                        color = TextOnDark,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold
                     )
                     val lineColor = getSubwayLineColor(lineNumber)
@@ -100,7 +97,7 @@ internal fun StationTopBar(
                         Text(
                             text = lineNumber.removePrefix("0"),
                             style = MaterialTheme.typography.labelLarge,
-                            color = TextOnDark,
+                            color = onSubwayLineColor(lineColor),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
@@ -120,7 +117,7 @@ internal fun StationTopBar(
                         Text(
                             text = "환승 노선",
                             style = MaterialTheme.typography.labelLarge,
-                            color = TextOnDark.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

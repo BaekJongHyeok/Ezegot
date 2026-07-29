@@ -28,10 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.BasicStationInfo
-import com.jonghyeok.ezegot.ui.theme.DividerColor
-import com.jonghyeok.ezegot.ui.theme.SkyBlue400
-import com.jonghyeok.ezegot.ui.theme.SurfaceWhite
-import com.jonghyeok.ezegot.ui.theme.TextSecondary
 import com.jonghyeok.ezegot.viewModel.StationViewModel
 
 /** 역 상세 화면의 알람 / 전화 / 공유 액션 바. 상단 바 아래에 겹쳐 배치된다. */
@@ -51,7 +47,7 @@ internal fun StationActionBar(
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(16.dp),
         shadowElevation = 6.dp,
-        color = SurfaceWhite
+        color = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier
@@ -66,21 +62,21 @@ internal fun StationActionBar(
                     Icon(
                         imageVector = if (isNotification) Icons.Default.Notifications else Icons.Default.NotificationsNone,
                         contentDescription = null,   // 아래 label "알람"이 읽히므로 중복을 피한다
-                        tint = if (isNotification) SkyBlue400 else TextSecondary,
+                        tint = if (isNotification) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp)
                     )
                 },
                 label = "알람",
                 onClick = { viewModel.toggleNotification() }
             )
-            VerticalDivider(modifier = Modifier.height(32.dp), thickness = 1.dp, color = DividerColor)
+            VerticalDivider(modifier = Modifier.height(32.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
             // 전화
             ActionItem(
                 icon = {
                     Icon(
                         imageVector = Icons.Default.Call,
                         contentDescription = null,   // 아래 label "전화"가 읽힌다
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp)
                     )
                 },
@@ -92,14 +88,14 @@ internal fun StationActionBar(
                     context.startActivity(intent)
                 }
             )
-            VerticalDivider(modifier = Modifier.height(32.dp), thickness = 1.dp, color = DividerColor)
+            VerticalDivider(modifier = Modifier.height(32.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
             // 공유
             ActionItem(
                 icon = {
                     Icon(
                         imageVector = Icons.Default.Share,
                         contentDescription = null,   // 아래 label "공유"가 읽힌다
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp)
                     )
                 },
@@ -141,6 +137,6 @@ private fun ActionItem(icon: @Composable () -> Unit, label: String, onClick: () 
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         icon()
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

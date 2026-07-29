@@ -22,12 +22,6 @@ import androidx.compose.ui.unit.dp
 import com.jonghyeok.ezegot.api.TimeTableResponse
 import com.jonghyeok.ezegot.api.TimeTableSchedule
 import com.jonghyeok.ezegot.dto.RealtimeArrival
-import com.jonghyeok.ezegot.ui.theme.ArrivalRed
-import com.jonghyeok.ezegot.ui.theme.Navy800
-import com.jonghyeok.ezegot.ui.theme.Navy900
-import com.jonghyeok.ezegot.ui.theme.SurfaceWhite
-import com.jonghyeok.ezegot.ui.theme.TextPrimary
-import com.jonghyeok.ezegot.ui.theme.TextSecondary
 
 /**
  * 전체 시간표에서 현재 시점 이후로 가장 빨리 도착할 2대를 골라
@@ -125,13 +119,13 @@ internal fun StationTimeTableCard(
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(16.dp),
         shadowElevation = 3.dp,
-        color = SurfaceWhite
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "첫차 / 막차 시간표",
                 style = MaterialTheme.typography.titleSmall,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(12.dp))
@@ -143,7 +137,7 @@ internal fun StationTimeTableCard(
                 Text(
                     text = errorMessage,
                     style = MaterialTheme.typography.bodySmall,
-                    color = ArrivalRed,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
@@ -151,7 +145,7 @@ internal fun StationTimeTableCard(
                 Text(
                     text = "네트워크 상태를 확인한 뒤 다시 들어와 주세요.",
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
@@ -160,7 +154,7 @@ internal fun StationTimeTableCard(
                 Text(
                     text = "해당 노선(코레일 등)은 서울 공공데이터에서 시간표를 제공하지 않습니다.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
@@ -180,7 +174,7 @@ internal fun StationTimeTableCard(
                         Text(
                             text = "$upLabel 방면",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Navy800,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -204,7 +198,7 @@ internal fun StationTimeTableCard(
                             Spacer(Modifier.height(2.dp))
                             last?.let { TimeTableRow("막차", it.leftTime) }
                         } else {
-                            Text("정보 없음", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                            Text("정보 없음", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
 
@@ -216,7 +210,7 @@ internal fun StationTimeTableCard(
                         Text(
                             text = "$dnLabel 방면",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Navy800,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -240,7 +234,7 @@ internal fun StationTimeTableCard(
                             Spacer(Modifier.height(2.dp))
                             last?.let { TimeTableRow("막차", it.leftTime) }
                         } else {
-                            Text("정보 없음", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                            Text("정보 없음", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -254,16 +248,16 @@ private fun TimeTableRow(label: String, time: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Surface(
             shape = RoundedCornerShape(4.dp),
-            color = Navy900.copy(alpha = 0.05f)
+            color = MaterialTheme.colorScheme.surface
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = Navy800,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
             )
         }
         Spacer(Modifier.width(6.dp))
-        Text(text = time.take(5), style = MaterialTheme.typography.bodySmall, color = TextPrimary, fontWeight = FontWeight.Medium)
+        Text(text = time.take(5), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
     }
 }
