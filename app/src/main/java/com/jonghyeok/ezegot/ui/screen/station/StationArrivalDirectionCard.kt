@@ -56,12 +56,15 @@ internal fun ArrivalDirectionCard(
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
     ) {
-        // 카드 헤더
+        // 카드 헤더.
+        // 높이를 38dp로 고정한다. IconButton 기본 크기가 48dp라 그대로 두면
+        // 행이 64dp까지 늘어나 제목 아래에 빈 공간이 생겼다.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(start = 13.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                .height(38.dp)
+                .padding(start = 13.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -80,7 +83,9 @@ internal fun ArrivalDirectionCard(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = onAlarmClick) {
+            // 헤더가 38dp라 IconButton 기본 48dp를 그대로 쓸 수 없다.
+            // 터치 영역은 헤더 높이만큼(38dp) 확보한다.
+            IconButton(onClick = onAlarmClick, modifier = Modifier.size(38.dp)) {
                 Icon(
                     imageVector = if (isAlarmOn) Icons.Default.Notifications else Icons.Default.NotificationsNone,
                     contentDescription = if (isAlarmOn) "알림 해제" else "알림 예약",

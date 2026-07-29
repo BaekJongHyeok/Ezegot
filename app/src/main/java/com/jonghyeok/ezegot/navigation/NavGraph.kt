@@ -4,22 +4,31 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.jonghyeok.ezegot.ui.screen.MainShell
 import com.jonghyeok.ezegot.ui.screen.SplashScreen
+import com.jonghyeok.ezegot.ui.screen.station.StationScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
 
-    /** 하단 탭과 역 상세를 모두 품는 최상위 화면 */
+    /** 하단 탭 4개를 가진 최상위 화면 */
     object Main : Screen("main")
+
+    object Station : Screen("station/{stationName}/{lineNumber}") {
+        fun createRoute(name: String, line: String) = "station/$name/$line"
+    }
 }
 
 /**
- * 최상위 그래프. 스플래시에서 본 화면으로 한 번 넘어가면 끝이다.
- * 탭 전환과 역 상세는 [MainShell] 안쪽 NavHost가 다룬다 —
- * 목업이 역 상세에서도 하단바를 유지하기 때문이다.
+ * 최상위 그래프.
+ *
+ * 역 상세를 [MainShell] 밖에 둬서 하단바가 자연히 사라지게 한다.
+ * 최상위 목적지가 아닌 화면에서 탭 바를 유지하면, 어느 탭도 선택되지 않은
+ * 모순된 상태가 된다.
  */
 @Composable
 fun NavGraph(navController: NavHostController) {
@@ -45,7 +54,30 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Screen.Main.route) {
-            MainShell()
+            MainShell(
+                onStationClick = { name, line ->
+                    navController.navigate(Screen.Station.createRoute(name, line))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.Station.route,
+            arguments = listOf(
+                navArgument("stationName") { type = NavType.StringType },
+                navArgument("lineNumber") { type = NavType.StringType }
+            )
+        ) { entry ->
+            StationScreen(
+                stationName = entry.arguments?.getString("stationName") ?: "",
+                lineNumber = entry.arguments?.getString("lineNumber") ?: "",
+                onBack = { navController.popBackStack() },
+                onStationClick = { name, line ->
+                    navController.navigate(Screen.Station.createRoute(name, line)) {
+                        popUpTo(Screen.Station.route) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

@@ -244,9 +244,9 @@ private fun FavoriteCarouselCard(
             TranslucentChip(text = favorite.direction, onLine = onLine)
         }
 
-        // 카드 본문 – 방향 하나가 즐겨찾기 하나이므로 행선지별로 나눈다
+        // 카드 본문 – 그 방향의 다음 열차를 최대 3대까지
         Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-            val shown = arrivals.take(2)
+            val shown = arrivals.take(3)
             if (shown.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -265,10 +265,8 @@ private fun FavoriteCarouselCard(
                     if (index > 0) {
                         HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                     }
-                    CarouselArrivalRow(
-                        arrival = arrival,
-                        next = shown.getOrNull(index + 1)
-                    )
+                    // 첫 열차만 크게. 아래는 참고 정보다
+                    CarouselArrivalRow(arrival = arrival, isFirst = index == 0)
                 }
             }
         }
@@ -294,33 +292,23 @@ private fun TranslucentChip(text: String, onLine: androidx.compose.ui.graphics.C
 }
 
 @Composable
-private fun CarouselArrivalRow(arrival: RealtimeArrival, next: RealtimeArrival?) {
+private fun CarouselArrivalRow(arrival: RealtimeArrival, isFirst: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 9.dp),
+            .padding(horizontal = 12.dp, vertical = if (isFirst) 9.dp else 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "${arrival.bstatnNm}행",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (next != null) {
-                Spacer(Modifier.height(1.dp))
-                Text(
-                    text = "다음 ${next.getFormattedMessage()}",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.tertiary,
-                    maxLines = 1
-                )
-            }
-        }
+        Text(
+            text = "${arrival.bstatnNm}행",
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
         Spacer(Modifier.width(6.dp))
-        ArrivalTime(arrival = arrival, fontSize = 26.sp)
+        ArrivalTime(arrival = arrival, fontSize = if (isFirst) 26.sp else 15.sp)
     }
 }
 
@@ -362,7 +350,8 @@ private fun NearbySection(
         if (stations.isEmpty()) {
             EmptyRow("주변에 표시할 역이 없습니다")
         } else {
-            stations.take(4).forEachIndexed { index, station ->
+            // 반경을 좁혀도 도심에서는 후보가 많다. 화면 몫도 고려해 3개까지만
+            stations.take(3).forEachIndexed { index, station ->
                 if (index > 0) {
                     HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
@@ -501,7 +490,11 @@ private fun SectionCard(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    letterSpacing = 0.sp
+                ),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium
             )
@@ -598,7 +591,12 @@ private fun ArrivalTime(
 /** 이 즐겨찾기(역 + 방향)에 해당하는 도착만 남긴다 */
 private fun Map<String, List<RealtimeArrival>>.arrivalsFor(favorite: FavoriteStation): List<RealtimeArrival> {
     val lineId = SubwayLine.getLineId(favorite.lineNumber)
+    // 종착역으로 중복을 지우면 안 된다. 2호선 내선은 다음 두 대가 모두 "성수행"이라
+    // 열차가 2대 와도 1대만 남아 카드가 비어 보였다.
     return (this[favorite.stationName] ?: emptyList())
-        .filter { it.subwayId == lineId && it.updnLine.matchesDirection(favorite.direction) }
-        .distinctBy { it.bstatnNm }
+        .filter {
+            it.subwayId == lineId &&
+                it.updnLine.matchesDirection(favorite.direction) &&
+                it.getFormattedMessage() != "출발"
+        }
 }

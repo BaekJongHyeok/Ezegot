@@ -33,10 +33,9 @@ import com.jonghyeok.ezegot.ui.screen.station.StationScreen
 /**
  * 하단 탭 4개를 가진 최상위 껍데기.
  *
- * 역 상세도 이 안에 둔다. 목업이 역 상세에서도 하단바를 유지하므로,
- * 탭 전환과 상세 진입을 같은 NavHost가 다룬다.
- * 상세에 들어가면 어느 탭도 선택 상태가 아니다 — 탭 중 하나를 억지로
- * 켜두면 지금 보는 화면과 어긋난다.
+ * 역 상세는 이 밖(바깥 NavHost)에 둔다. 최상위 목적지가 아니라 파고들어간
+ * 화면이라, 하단바를 유지하면 어느 탭도 선택되지 않은 모순된 상태가 되고
+ * 56dp를 지금 화면과 무관한 바에 계속 쓴다.
  */
 private enum class MainTab(val route: String, val label: String, val icon: ImageVector) {
     HOME("home", "홈", Icons.Default.Home),
@@ -45,19 +44,13 @@ private enum class MainTab(val route: String, val label: String, val icon: Image
     ALARM("alarm", "알림", Icons.Default.NotificationsNone)
 }
 
-private const val STATION_ROUTE = "station/{stationName}/{lineNumber}"
 
-private fun stationRoute(name: String, line: String) = "station/$name/$line"
 
 @Composable
-fun MainShell() {
+fun MainShell(onStationClick: (String, String) -> Unit) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-
-    val openStation: (String, String) -> Unit = { name, line ->
-        navController.navigate(stationRoute(name, line))
-    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -111,35 +104,17 @@ fun MainShell() {
                 HomeScreen(
                     onSearchClick = { navController.navigate(MainTab.SEARCH.route) },
                     onMapClick = { navController.navigate(MainTab.NEARBY.route) },
-                    onStationClick = openStation
+                    onStationClick = onStationClick
                 )
             }
             composable(MainTab.NEARBY.route) {
-                NearbyMapScreen(onStationClick = openStation)
+                NearbyMapScreen(onStationClick = onStationClick)
             }
             composable(MainTab.SEARCH.route) {
-                SearchScreen(onStationClick = openStation)
+                SearchScreen(onStationClick = onStationClick)
             }
             composable(MainTab.ALARM.route) {
                 AlarmScreen()
-            }
-            composable(
-                route = STATION_ROUTE,
-                arguments = listOf(
-                    navArgument("stationName") { type = NavType.StringType },
-                    navArgument("lineNumber") { type = NavType.StringType }
-                )
-            ) { entry ->
-                StationScreen(
-                    stationName = entry.arguments?.getString("stationName") ?: "",
-                    lineNumber = entry.arguments?.getString("lineNumber") ?: "",
-                    onBack = { navController.popBackStack() },
-                    onStationClick = { name, line ->
-                        navController.navigate(stationRoute(name, line)) {
-                            popUpTo(STATION_ROUTE) { inclusive = true }
-                        }
-                    }
-                )
             }
         }
     }

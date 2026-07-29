@@ -13,7 +13,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -44,7 +46,7 @@ import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.dto.directionPairFor
 import com.jonghyeok.ezegot.dto.matchesDirection
 import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
-import com.jonghyeok.ezegot.ui.theme.onSubwayLineColor
+import com.jonghyeok.ezegot.ui.theme.onSubwayLineColorLarge
 import com.jonghyeok.ezegot.viewModel.StationViewModel
 
 /**
@@ -73,18 +75,20 @@ fun StationScreen(
     }
 
     val lineColor = getSubwayLineColor(lineNumber)
-    val onLine = onSubwayLineColor(lineColor)
+    val onLine = onSubwayLineColorLarge(lineColor)
     val lineId = SubwayLine.getLineId(lineNumber)
     val (upDirection, dnDirection) = directionPairFor(lineNumber)
 
-    // 방향별 도착 목록. "출발"한 열차는 이미 떠났으므로 뺀다
+    // 방향별 도착 목록. "출발"한 열차는 이미 떠났으므로 뺀다.
+    //
+    // 종착역으로 중복을 지우면 안 된다. 2호선 내선은 다음 두 대가 모두 "성수행"이라
+    // 열차가 2대 와도 1대만 남았다. 같은 열차가 두 번 오지는 않으므로 그대로 쓴다.
     fun arrivalsOf(direction: String) = uiState.arrivals
         .filter {
             it.subwayId == lineId &&
                 it.updnLine.matchesDirection(direction) &&
                 it.getFormattedMessage() != "출발"
         }
-        .distinctBy { it.bstatnNm }
 
     val upArrivals = arrivalsOf(upDirection)
     val dnArrivals = arrivalsOf(dnDirection)
@@ -245,6 +249,9 @@ fun StationScreen(
             )
 
             StationLocationCard(location = uiState.stationLocation)
+
+            // 마지막 카드가 화면 끝에 붙어 잘려 보이지 않도록
+            Spacer(Modifier.height(24.dp))
         }
     }
 }

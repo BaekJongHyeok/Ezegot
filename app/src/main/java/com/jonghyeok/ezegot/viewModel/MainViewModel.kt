@@ -213,7 +213,9 @@ class MainViewModel @Inject constructor(
                 .filter { abs(lat - it.latitude) < 0.04 && abs(lon - it.longitude) < 0.05 }
                 .mapNotNull { loc ->
                     val d = haversine(lat, lon, loc.latitude, loc.longitude)
-                    if (d <= 3.0) loc to d else null
+                    // 3km는 도보 40분 거리라 "주변"으로 읽히지 않는다.
+                    // 1.5km(도보 약 22분)까지만 남긴다.
+                    if (d <= NEARBY_RADIUS_KM) loc to d else null
                 }
                 .sortedBy { it.second }
                 .flatMap { (loc, d) ->
@@ -240,5 +242,10 @@ class MainViewModel @Inject constructor(
         val a = sin(dLat / 2).pow(2) +
                 cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2)
         return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+    }
+
+    companion object {
+        /** 근처 역 반경(km). 도보 약 22분 */
+        const val NEARBY_RADIUS_KM = 1.5
     }
 }

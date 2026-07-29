@@ -84,6 +84,19 @@ fun onSubwayLineColor(background: Color): Color =
     if (background.luminance() > 0.179f) Color.Black else Color.White
 
 /**
+ * 큰 글자·아이콘용 노선 위 글자색. 역 상세 헤더처럼 22sp 글자와 아이콘이 얹히는 곳에 쓴다.
+ *
+ * WCAG는 큰 텍스트(18sp+)와 아이콘 같은 비텍스트 요소에 3:1을 요구한다.
+ * 작은 뱃지와 같은 임계(4.5:1)를 쓰면 2호선(#009D3E)처럼 어두운 노선까지
+ * 검정으로 뒤집혀, 지하철 표기 관행과 어긋나고 헤더가 탁해 보인다.
+ *
+ * 임계 0.30은 흰 글자가 3:1을 만족하는 최대 배경 휘도다.
+ * 이 값 이하면 흰색(관행), 넘으면 검정으로 간다.
+ */
+fun onSubwayLineColorLarge(background: Color): Color =
+    if (background.luminance() > 0.30f) Color.Black else Color.White
+
+/**
  * 연한 노선색 배경. 주변 역 정사각 뱃지처럼 작은 면적에 쓴다.
  * 원색을 흰색과 섞어 12% 농도로 만든다.
  */
