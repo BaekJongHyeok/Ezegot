@@ -61,6 +61,18 @@ class MainViewModel @Inject constructor(
     private val _nearbyStationList = MutableStateFlow<List<NearbyStation>>(emptyList())
     val nearbyStationList: StateFlow<List<NearbyStation>> = _nearbyStationList.asStateFlow()
 
+    /**
+     * 가장 가까운 역 하나의 도착 정보.
+     *
+     * 근처 역 목록 전체에 도착을 붙이면 역 수만큼 API를 부르게 된다.
+     * 일일 1,000건 제한이 있어 최근접 한 곳만 호출한다.
+     */
+    private val _nearestArrivals = MutableStateFlow<List<RealtimeArrival>>(emptyList())
+    val nearestArrivals: StateFlow<List<RealtimeArrival>> = _nearestArrivals.asStateFlow()
+
+    private var nearestArrivalStation: String? = null
+    private var nearestArrivalJob: Job? = null
+
     // ── 현재 위치 ────────────────────────────────────────────────
     private val _locationState = MutableStateFlow<LocationState>(LocationState.Loading)
     val locationState: StateFlow<LocationState> = _locationState.asStateFlow()
@@ -232,6 +244,28 @@ class MainViewModel @Inject constructor(
                 .distinctBy { it.stationName to it.lineNumber }
         }
         _nearbyStationList.value = result
+        loadNearestArrival(result.firstOrNull())
+    }
+
+    /**
+     * 가장 가까운 역 하나의 도착 정보만 불러온다.
+     *
+     * 목록 전체에 붙이면 근처 역 수만큼 실시간 API를 호출하게 되는데,
+     * 일일 1,000건 제한이 있어 감당할 수 없다. 한 건만 늘린다.
+     */
+    private fun loadNearestArrival(nearest: NearbyStation?) {
+        if (nearest == null) {
+            _nearestArrivals.value = emptyList()
+            return
+        }
+        // 같은 역을 다시 부르지 않는다 (위치가 조금 움직여도 최근접은 잘 안 바뀐다)
+        if (nearest.stationName == nearestArrivalStation) return
+        nearestArrivalStation = nearest.stationName
+
+        nearestArrivalJob?.cancel()
+        nearestArrivalJob = viewModelScope.launch {
+            _nearestArrivals.value = mainRepository.getRealtimeArrival(nearest.stationName)
+        }
     }
 
     // ── Haversine ─────────────────────────────────────────────────
