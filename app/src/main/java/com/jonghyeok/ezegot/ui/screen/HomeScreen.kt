@@ -1,5 +1,6 @@
 package com.jonghyeok.ezegot.ui.screen
 
+import com.jonghyeok.ezegot.util.forDisplay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,12 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PageSize
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -52,15 +47,18 @@ import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.dto.directionPairFor
 import com.jonghyeok.ezegot.dto.matchesDirection
 import com.jonghyeok.ezegot.ui.theme.EzegotWordmark
-import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
-import com.jonghyeok.ezegot.ui.theme.onSubwayLineColor
 import com.jonghyeok.ezegot.util.ArrivalEmphasis
 import com.jonghyeok.ezegot.util.emphasis
 import com.jonghyeok.ezegot.viewModel.MainViewModel
 
-/** 캐러셀에 올릴 최대 개수. 넘치면 아래 리스트로 이어 붙인다 */
-private const val CAROUSEL_LIMIT = 3
-
+/**
+ * 홈.
+ *
+ * 즐겨찾기를 캐러셀 3개 + 리스트로 나눠 두었는데, 즐겨찾기가 역 단위가 되면서
+ * 카드와 행이 담는 정보가 같아졌다. 그러자 카드가 더 주는 것은 큰 글자뿐인데
+ * 가로 스와이프를 요구하고, 섹션 제목이 둘로 갈리고, 3+1 같은 분할이
+ * 자의적으로 보였다. 리스트 하나로 합치고 도착 시간을 키웠다.
+ */
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel = hiltViewModel(),
@@ -78,9 +76,6 @@ fun HomeScreen(
     val nearbyStations by viewModel.nearbyStationList.collectAsState()
     val nearestArrivals by viewModel.nearestArrivals.collectAsState()
 
-    val carouselItems = favorites.take(CAROUSEL_LIMIT)
-    val overflowItems = favorites.drop(CAROUSEL_LIMIT)
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -89,14 +84,13 @@ fun HomeScreen(
         HomeHeader(onSearchClick = onSearchClick, onSettingsClick = {})
 
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            Spacer(Modifier.height(6.dp))
 
-            if (carouselItems.isNotEmpty()) {
-                FavoriteCarousel(
-                    favorites = carouselItems,
-                    arrivalMap = arrivalMap,
-                    onStationClick = onStationClick
-                )
-            }
+            FavoriteSection(
+                favorites = favorites,
+                arrivalMap = arrivalMap,
+                onStationClick = onStationClick
+            )
 
             Spacer(Modifier.height(6.dp))
 
@@ -106,16 +100,6 @@ fun HomeScreen(
                 onMapClick = onMapClick,
                 onStationClick = onStationClick
             )
-
-            // 캐러셀에 다 넣으면 스와이프가 늘어난다. 4번째부터는 리스트로 잇는다
-            if (overflowItems.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
-                OverflowFavoriteSection(
-                    favorites = overflowItems,
-                    arrivalMap = arrivalMap,
-                    onStationClick = onStationClick
-                )
-            }
 
             Spacer(Modifier.height(16.dp))
         }
@@ -162,195 +146,6 @@ private fun HomeHeader(onSearchClick: () -> Unit, onSettingsClick: () -> Unit) {
     }
 }
 
-// ── 즐겨찾기 캐러셀 ──────────────────────────────────────────────
-@Composable
-@OptIn(ExperimentalFoundationApi::class)
-private fun FavoriteCarousel(
-    favorites: List<FavoriteStation>,
-    arrivalMap: Map<String, List<RealtimeArrival>>,
-    onStationClick: (String, String) -> Unit
-) {
-    val pagerState = rememberPagerState(pageCount = { favorites.size })
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(vertical = 14.dp)
-    ) {
-        // 아래 "다른 즐겨찾기" 리스트와 같은 성격임을 알리는 라벨.
-        // 없으면 캐러셀과 리스트가 왜 나뉘는지 알 수 없다.
-        Text(
-            text = "즐겨찾기",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                letterSpacing = 0.sp
-            ),
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(start = 12.dp, bottom = 10.dp)
-        )
-
-        HorizontalPager(
-            state = pagerState,
-            // 옆 카드가 살짝 보이도록 남긴다
-            contentPadding = PaddingValues(horizontal = 12.dp),
-            pageSpacing = 10.dp,
-            pageSize = PageSize.Fixed(178.dp)
-        ) { page ->
-            val favorite = favorites[page]
-            FavoriteCarouselCard(
-                favorite = favorite,
-                arrivals = arrivalMap.directionalArrivals(favorite),
-                onClick = { onStationClick(favorite.stationName, favorite.lineNumber) }
-            )
-        }
-
-        // 카드가 하나뿐이면 인디케이터가 정보를 주지 않는다
-        if (favorites.size > 1) {
-            Spacer(Modifier.height(10.dp))
-            PagerIndicator(
-                count = favorites.size,
-                current = pagerState.currentPage,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-        }
-    }
-}
-
-@Composable
-private fun FavoriteCarouselCard(
-    favorite: FavoriteStation,
-    arrivals: List<Pair<String, RealtimeArrival>>,
-    onClick: () -> Unit
-) {
-    val lineColor = getSubwayLineColor(favorite.lineNumber)
-    val onLine = onSubwayLineColor(lineColor)
-
-    Column(
-        modifier = Modifier
-            .width(178.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
-            .clickable { onClick() }
-    ) {
-        // 카드 상단 – 호선색 배경
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(lineColor)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = favorite.stationName,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                color = onLine,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-            Spacer(Modifier.width(6.dp))
-            TranslucentChip(text = favorite.lineNumber.removePrefix("0"), onLine = onLine)
-        }
-
-        // 카드 본문 – 방향마다 다음 열차 한 대씩, 최대 2행
-        Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-            if (arrivals.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(62.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "도착 정보 없음",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                }
-            } else {
-                arrivals.forEachIndexed { index, (direction, arrival) ->
-                    if (index > 0) {
-                        HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                    }
-                    CarouselArrivalRow(direction = direction, arrival = arrival)
-                }
-            }
-        }
-    }
-}
-
-/** 호선색 헤더 위에 얹는 반투명 칩. 배경이 노선마다 달라 글자색은 넘겨받는다 */
-@Composable
-private fun TranslucentChip(text: String, onLine: androidx.compose.ui.graphics.Color) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(9.dp))
-            .background(onLine.copy(alpha = 0.22f))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            color = onLine,
-            maxLines = 1
-        )
-    }
-}
-
-@Composable
-private fun CarouselArrivalRow(
-    direction: String,
-    arrival: RealtimeArrival
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // 두 행이 서로 다른 방향이므로 방향을 앞에 둔다.
-        // 행선지만 있으면 2호선처럼 양방향이 모두 "성수행"인 노선에서 구분되지 않는다.
-        Text(
-            text = "$direction · ${arrival.bstatnNm}행",
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
-        Spacer(Modifier.width(6.dp))
-        // 두 방향은 대등하다. 위쪽만 크게 하면 상행이 더 중요해 보인다
-        ArrivalTime(arrival = arrival, fontSize = 20.sp)
-    }
-}
-
-@Composable
-private fun PagerIndicator(count: Int, current: Int, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        repeat(count) { index ->
-            val active = index == current
-            Box(
-                modifier = Modifier
-                    .width(if (active) 14.dp else 4.dp)
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (active) MaterialTheme.colorScheme.onSurface
-                        else MaterialTheme.colorScheme.outline
-                    )
-            )
-        }
-    }
-}
-
 // ── 내 주변 역 ───────────────────────────────────────────────────
 @Composable
 private fun NearbySection(
@@ -376,10 +171,12 @@ private fun NearbySection(
                     station = station,
                     // 도착 정보는 가장 가까운 역에만 붙인다. 목록 전체에 붙이면
                     // 역 수만큼 실시간 API를 부르게 되고 일일 제한을 넘긴다.
+                    // 방향은 가리지 않는다. 즐겨찾기가 아니라 "근처에 뭐가 있나"를
+                    // 보는 자리라 어느 쪽이든 가장 빨리 오는 한 대면 된다.
                     arrival = if (index == 0) {
-                        nearestArrivals.firstOrNull {
-                            it.subwayId == SubwayLine.getLineId(station.lineNumber)
-                        }
+                        nearestArrivals
+                            .forDisplay(SubwayLine.getLineId(station.lineNumber)) { true }
+                            .firstOrNull()
                     } else null,
                     onClick = { onStationClick(station.stationName, station.lineNumber) }
                 )
@@ -441,21 +238,23 @@ private fun NearbyStation.walkingLabel(): String {
     return "$distanceText · 도보 ${minutes}분"
 }
 
-// ── 캐러셀에서 넘친 즐겨찾기 ─────────────────────────────────────
+// ── 즐겨찾기 ─────────────────────────────────────────────────────
 @Composable
-private fun OverflowFavoriteSection(
+private fun FavoriteSection(
     favorites: List<FavoriteStation>,
     arrivalMap: Map<String, List<RealtimeArrival>>,
     onStationClick: (String, String) -> Unit
 ) {
-    // "더보기"는 왜 나뉘었는지 설명하지 못한다. 위 캐러셀과 같은 즐겨찾기이고
-    // 앞선 것만 위로 뽑았다는 뜻이 드러나게 쓴다.
-    SectionCard(title = "다른 즐겨찾기") {
+    SectionCard(title = "즐겨찾기") {
+        if (favorites.isEmpty()) {
+            EmptyRow("역 상세에서 별을 눌러 추가하세요")
+            return@SectionCard
+        }
         favorites.forEachIndexed { index, favorite ->
             if (index > 0) {
                 HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
             }
-            OverflowFavoriteRow(
+            FavoriteRow(
                 favorite = favorite,
                 arrivals = arrivalMap.directionalArrivals(favorite),
                 onClick = { onStationClick(favorite.stationName, favorite.lineNumber) }
@@ -465,9 +264,9 @@ private fun OverflowFavoriteSection(
 }
 
 @Composable
-private fun OverflowFavoriteRow(
+private fun FavoriteRow(
     favorite: FavoriteStation,
-    arrivals: List<Pair<String, RealtimeArrival>>,
+    arrivals: List<Pair<String, RealtimeArrival?>>,
     onClick: () -> Unit
 ) {
     Row(
@@ -488,13 +287,7 @@ private fun OverflowFavoriteRow(
             modifier = Modifier.weight(1f)
         )
         Spacer(Modifier.width(8.dp))
-        if (arrivals.isEmpty()) {
-            Text(
-                text = "정보 없음",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                color = MaterialTheme.colorScheme.tertiary
-            )
-        } else {
+        run {
             // 역 단위라 한 행이 두 방향을 함께 보여준다.
             // 방향 라벨은 왼쪽, 시간은 오른쪽으로 맞춰 두 줄의 열이 흔들리지 않게 한다.
             Column(horizontalAlignment = Alignment.End) {
@@ -502,13 +295,23 @@ private fun OverflowFavoriteRow(
                     if (index > 0) Spacer(Modifier.height(3.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "$direction · ${arrival.bstatnNm}행",
+                            // 그 방향에 열차가 없어도 줄을 지우지 않는다.
+                            // 한 줄만 남으면 그 역에 방향이 하나뿐인 것처럼 보인다.
+                            text = if (arrival != null) "$direction · ${arrival.bstatnNm}행" else direction,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1
                         )
                         Spacer(Modifier.width(8.dp))
-                        ArrivalTime(arrival = arrival, fontSize = 15.sp)
+                        if (arrival != null) {
+                            ArrivalTime(arrival = arrival, fontSize = 18.sp)
+                        } else {
+                            Text(
+                                text = "정보 없음",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
                     }
                 }
             }
@@ -644,14 +447,15 @@ private fun ArrivalTime(
  */
 private fun Map<String, List<RealtimeArrival>>.directionalArrivals(
     favorite: FavoriteStation
-): List<Pair<String, RealtimeArrival>> {
+): List<Pair<String, RealtimeArrival?>> {
     val lineId = SubwayLine.getLineId(favorite.lineNumber)
-    val arrivals = (this[favorite.stationName] ?: emptyList())
-        .filter { it.subwayId == lineId && it.getFormattedMessage() != "출발" }
+    val all = this[favorite.stationName] ?: emptyList()
 
     val (first, second) = directionPairFor(favorite.lineNumber)
-    return listOf(first, second).mapNotNull { direction ->
-        arrivals.firstOrNull { it.updnLine.matchesDirection(direction) }
-            ?.let { direction to it }
+    // 열차가 없는 방향도 자리를 남긴다. 화면이 방향 라벨과 "정보 없음"을 그린다.
+    return listOf(first, second).map { direction ->
+        // 거르기와 정렬은 역 상세·위젯과 같은 규칙을 쓴다(ArrivalOrdering).
+        // 정렬하지 않으면 API가 급행 계통을 끼워 넣어 가장 빠른 열차가 첫 줄에 오지 않는다.
+        direction to all.forDisplay(lineId) { it.matchesDirection(direction) }.firstOrNull()
     }
 }

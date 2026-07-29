@@ -225,8 +225,10 @@ class MainViewModel @Inject constructor(
                 .filter { abs(lat - it.latitude) < 0.04 && abs(lon - it.longitude) < 0.05 }
                 .mapNotNull { loc ->
                     val d = haversine(lat, lon, loc.latitude, loc.longitude)
-                    // 3km는 도보 40분 거리라 "주변"으로 읽히지 않는다.
-                    // 1.5km(도보 약 22분)까지만 남긴다.
+                    // 반경만으로 자르면 역이 성긴 지역에서 섹션이 1개만 남거나 비어
+                    // "내 주변 역"이 이름값을 못 한다. 실제로 1.5km 안에 한 곳뿐인
+                    // 위치가 있었다. 거리·도보 시간을 함께 보여주므로 얼마나 먼지는
+                    // 목록이 알려준다. 상한은 "주변"이라 부를 수 없는 거리만 막는다.
                     if (d <= NEARBY_RADIUS_KM) loc to d else null
                 }
                 .sortedBy { it.second }
@@ -279,7 +281,14 @@ class MainViewModel @Inject constructor(
     }
 
     companion object {
-        /** 근처 역 반경(km). 도보 약 22분 */
-        const val NEARBY_RADIUS_KM = 1.5
+        /**
+         * 근처 역 반경(km).
+         *
+         * 1.5km(도보 약 22분)로 잡았더니 역이 성긴 지역에서 한 곳만 잡혀
+         * 섹션이 제 역할을 못 했다. 3km(도보 약 45분)까지 넓힌다.
+         * 화면은 가까운 순으로 3개까지만 보여주므로, 도심에서 목록이 길어지지는 않는다.
+         * 그보다 먼 역은 "주변"이라 부를 수 없어 남긴다.
+         */
+        const val NEARBY_RADIUS_KM = 3.0
     }
 }
