@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
@@ -321,11 +322,13 @@ fun FavoriteArrivalRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // 도착 시간보다 무게를 낮춘다. 사용자가 등록한 역이라 재확인 가치가 낮다
                     Text(
                         text = station.stationName,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     val lineColor = getSubwayLineColor(station.lineNumber)
                     Surface(shape = RoundedCornerShape(6.dp), color = lineColor) {
@@ -342,64 +345,88 @@ fun FavoriteArrivalRow(
 
             Spacer(Modifier.height(12.dp))
 
-            if (isLoading) {
-                // 스켈레톤
-                repeat(3) { i ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(if (i == 1) 0.6f else 1f)
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(DividerColor)
-                    )
-                    if (i < 2) Spacer(Modifier.height(8.dp))
+            // 도착 1건 = 1행. 건수만큼만 그리므로 카드 높이가 내용에 따라 줄어든다.
+            val lines = upArrivals.take(2) + dnArrivals.take(2)
+
+            when {
+                isLoading -> {
+                    // 스켈레톤도 실제 행 높이(28dp)에 맞춰 두 줄만 놓는다
+                    repeat(2) { i ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(if (i == 0) 1f else 0.7f)
+                                .height(20.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(DividerColor)
+                        )
+                        if (i == 0) Spacer(Modifier.height(8.dp))
+                    }
                 }
-            } else {
-                // 상행 / 하행 가로 2열 배치
-                val upDest = upArrivals.firstOrNull()?.bstatnNm ?: "-"
-                val dnDest = dnArrivals.firstOrNull()?.bstatnNm ?: "-"
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ArrivalColumn(
-                        modifier = Modifier.weight(1f),
-                        direction = "↑ $upDest",
-                        arrivals = upArrivals
+
+                lines.isEmpty() -> {
+                    Text(
+                        text = "도착 정보 없음",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextHint
                     )
-                    Box(modifier = Modifier.width(1.dp).height(60.dp).background(DividerColor))
-                    ArrivalColumn(
-                        modifier = Modifier.weight(1f),
-                        direction = "↓ $dnDest",
-                        arrivals = dnArrivals
-                    )
+                }
+
+                else -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        lines.forEach { ArrivalLine(it) }
+                    }
                 }
             }
         }
     }
 }
 
+/**
+ * 도착 한 건을 한 줄로 보여준다.
+ *
+ * 좌측은 방면·행선지(보조), 우측은 남은 시간(주 정보).
+ * 시간을 우측에 정렬해 여러 역을 세로로 훑을 때 눈이 한 열만 따라가면 되게 했다.
+ */
 @Composable
-fun ArrivalColumn(modifier: Modifier, direction: String, arrivals: List<RealtimeArrival>) {
-    Column(modifier = modifier) {
+private fun ArrivalLine(arrival: RealtimeArrival) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Text(
-            text = direction,
-            style = MaterialTheme.typography.labelSmall,
+            text = arrival.directionLabel(),
+            style = MaterialTheme.typography.bodySmall,
             color = TextHint,
             maxLines = 1,
-            modifier = Modifier.padding(bottom = 6.dp)
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(end = 12.dp)
         )
-        arrivals.take(2).forEach { a ->
-            Text(
-                text = a.getFormattedMessage(),
-                style = MaterialTheme.typography.bodySmall,
-                color = ArrivalRed,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-        if (arrivals.isEmpty()) {
-            Text("정보없음", style = MaterialTheme.typography.bodySmall, color = TextHint)
-        }
+        Text(
+            text = arrival.getFormattedMessage(),
+            style = MaterialTheme.typography.headlineSmall,
+            color = ArrivalRed,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * "성수행 - 교대방면" → "교대 방면 · 성수행"
+ *
+ * `trainLineNm`의 뒷부분은 다음 역(방면), `bstatnNm`은 종착역이다.
+ * 종착역에 "행"을 붙여 방면과 구분되게 한다. 2호선처럼 순환하는 노선에서는
+ * 방면과 종착역이 달라 보여서, 라벨이 없으면 서로 어긋난 정보처럼 읽힌다.
+ */
+private fun RealtimeArrival.directionLabel(): String {
+    val via = trainLineName.substringAfter("-", "").replace("방면", "").trim()
+    val dest = bstatnNm.trim()
+    return when {
+        via.isNotEmpty() && dest.isNotEmpty() -> "$via 방면 · ${dest}행"
+        dest.isNotEmpty() -> "${dest}행"
+        via.isNotEmpty() -> "$via 방면"
+        else -> "행선지 정보 없음"
     }
 }
 
