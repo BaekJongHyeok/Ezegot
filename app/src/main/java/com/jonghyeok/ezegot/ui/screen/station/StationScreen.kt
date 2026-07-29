@@ -25,6 +25,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -110,7 +111,7 @@ fun StationScreen(
 
     var alarmTarget by remember { mutableStateOf<RealtimeArrival?>(null) }
     var showPermissionRationale by remember { mutableStateOf(false) }
-    var sheetDirection by remember { mutableStateOf<String?>(null) }
+    var showTimetable by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -171,21 +172,26 @@ fun StationScreen(
     }
 
     // ── 전체 시간표 시트 ─────────────────────────────────────────
-    sheetDirection?.let { direction ->
-        val schedules = if (direction == upDirection) {
-            uiState.timetable?.first?.schedules ?: emptyList()
-        } else {
-            uiState.timetable?.second?.schedules ?: emptyList()
-        }
+    // 예전에는 upDirection으로 고정해 열어서, 어느 방향인지 모른 채 열리고
+    // 반대 방향은 볼 방법이 아예 없었다. 이제 시트 안에서 전환한다.
+    if (showTimetable) {
         ModalBottomSheet(
-            onDismissRequest = { sheetDirection = null },
+            onDismissRequest = { showTimetable = false },
+            // 중간 단계를 두면 내용이 길어 절반만 열린 채 멈춘다.
+            // 시간표는 처음부터 다 펼쳐 보이는 편이 낫다.
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
         ) {
-            FullTimetableSheet(
-                direction = if (direction == upDirection) upLabel else dnLabel,
-                schedules = schedules
-            ) { sheetDirection = null }
+            StationTimetableSheet(
+                stationName = stationName,
+                upLabel = upLabel,
+                dnLabel = dnLabel,
+                upSchedules = uiState.timetable?.first?.schedules ?: emptyList(),
+                dnSchedules = uiState.timetable?.second?.schedules ?: emptyList(),
+                startWithUp = true,
+                onClose = { showTimetable = false }
+            )
         }
     }
 
@@ -247,7 +253,7 @@ fun StationScreen(
                 up = uiState.timetable?.first,
                 down = uiState.timetable?.second,
                 errorMessage = uiState.errorMessage,
-                onOpenFullTimetable = { sheetDirection = upDirection }
+                onOpenFullTimetable = { showTimetable = true }
             )
 
             StationLocationCard(location = uiState.stationLocation)
