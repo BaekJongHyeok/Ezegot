@@ -1,23 +1,28 @@
 package com.jonghyeok.ezegot.ui.screen.station
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,23 +32,28 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jonghyeok.ezegot.SubwayLine
-import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.dto.directionPairFor
+import com.jonghyeok.ezegot.dto.matchesDirection
+import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
+import com.jonghyeok.ezegot.ui.theme.onSubwayLineColor
 import com.jonghyeok.ezegot.viewModel.StationViewModel
 
 /**
- * 역 상세 화면.
+ * 역 상세.
  *
- * 실시간 도착 정보, 첫차·막차 시간표, 역 위치, 역 정보를 한 화면에 보여준다.
- * 구성 요소는 같은 패키지의 파일들로 나뉘어 있다.
+ * 정보를 탭으로 감추지 않고 세로로 전부 노출한다.
+ * 위에서부터 헤더 → 방향별 도착 카드 → 첫차·막차 → 위치.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StationScreen(
     stationName: String,
@@ -55,64 +65,6 @@ fun StationScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
-    val stationInfo = uiState.stationInfo
-    val arrivalInfo = uiState.arrivals
-    val favoriteDirections = uiState.favoriteDirections
-    val stationLocation = uiState.stationLocation
-
-    var showPermissionRationale by remember { mutableStateOf(false) }
-    var pendingAlarmArrival by remember { mutableStateOf<RealtimeArrival?>(null) }
-    var pendingAlarmThreshold by remember { mutableStateOf<Int?>(null) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            // 권한 허용됨 -> 보류 중인 알람 설정 실행
-            pendingAlarmArrival?.let { arr ->
-                pendingAlarmThreshold?.let { threshold ->
-                    viewModel.setAlarm(arr, threshold)
-                }
-            }
-        } else {
-            // 권한 거부됨 -> 사용자에게 알림
-            Toast.makeText(context, "알림 권한이 없으면 도착 정보를 받을 수 없습니다.", Toast.LENGTH_SHORT).show()
-        }
-        pendingAlarmArrival = null
-        pendingAlarmThreshold = null
-    }
-
-    if (showPermissionRationale) {
-        AlertDialog(
-            onDismissRequest = { showPermissionRationale = false },
-            title = { Text("알림 권한 필요") },
-            text = { Text("지하철 도착 알림을 받으려면 알림 권한 허용이 필요합니다. 다음 화면에서 '허용'을 선택해 주세요.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showPermissionRationale = false
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                }) {
-                    Text("확인")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showPermissionRationale = false
-                    pendingAlarmArrival = null
-                    pendingAlarmThreshold = null
-                }) {
-                    Text("취소")
-                }
-            }
-        )
-    }
-
-    val timeTable = uiState.timetable
-
-    // 시간표는 위치와 무관하다. 예전에는 stationLocation을 키로 삼아,
-    // 위치 권한이 없으면 시간표까지 로드되지 않았다.
     LaunchedEffect(stationName) {
         viewModel.loadStationInfo(stationName, lineNumber)
         viewModel.loadArrivalInfo(stationName)
@@ -120,101 +72,213 @@ fun StationScreen(
         viewModel.loadStationLocation(stationName)
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        StationTopBar(
-            stationName = stationName,
-            lineNumber = lineNumber,
-            arrivalInfo = arrivalInfo,
-            onBack = onBack,
-            onStationClick = onStationClick
-        )
+    val lineColor = getSubwayLineColor(lineNumber)
+    val onLine = onSubwayLineColor(lineColor)
+    val lineId = SubwayLine.getLineId(lineNumber)
+    val (upDirection, dnDirection) = directionPairFor(lineNumber)
 
-        // ── 액션 버튼 및 스크롤 영역 ────────────────────────────────
-        Box(modifier = Modifier.fillMaxSize()) {
-            // 아래 스크롤 콘텐츠를 먼저 배치
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(top = 34.dp) // Action 바 하단에 딱 붙도록 정밀 조정
-            ) {
-                // 도착 정보 카드
-                stationInfo?.let { info ->
-                    // 방향 레이블 미리 계산 (공통 사용)
-                    val lineId = SubwayLine.getLineId(info.lineNumber) ?: ""
-                    val defaultUp = if (info.lineNumber.contains("2호선")) "내선 방면" else "상행 방면"
-                    val defaultDn = if (info.lineNumber.contains("2호선")) "외선 방면" else "하행 방면"
+    // 방향별 도착 목록. "출발"한 열차는 이미 떠났으므로 뺀다
+    fun arrivalsOf(direction: String) = uiState.arrivals
+        .filter {
+            it.subwayId == lineId &&
+                it.updnLine.matchesDirection(direction) &&
+                it.getFormattedMessage() != "출발"
+        }
+        .distinctBy { it.bstatnNm }
 
-                    val upArr = arrivalInfo.filter {
-                        it.subwayId == lineId && (it.updnLine == "상행" || it.updnLine == "내선") && it.getFormattedMessage() != "출발"
-                    }.distinctBy { it.bstatnNm }
+    val upArrivals = arrivalsOf(upDirection)
+    val dnArrivals = arrivalsOf(dnDirection)
 
-                    val dnArr = arrivalInfo.filter {
-                        it.subwayId == lineId && (it.updnLine == "하행" || it.updnLine == "외선") && it.getFormattedMessage() != "출발"
-                    }.distinctBy { it.bstatnNm }
+    // 방면 라벨은 실시간 trainLineNm의 뒷부분(다음 역)에서 뽑는다.
+    // 시간표의 종착역을 쓰면 2호선처럼 순환하는 노선에서 좌우가 똑같아진다.
+    val upLabel = upArrivals.directionLabel(upDirection)
+    val dnLabel = dnArrivals.directionLabel(dnDirection)
 
-                    val upDtLabel = upArr.firstOrNull()?.trainLineName?.split("-")?.lastOrNull()?.trim()
-                        ?.replace("(급행)", "")?.trim() ?: defaultUp
-                    val dnDtLabel = dnArr.firstOrNull()?.trainLineName?.split("-")?.lastOrNull()?.trim()
-                         ?.replace("(급행)", "")?.trim() ?: defaultDn
+    val transferLines = remember(uiState.arrivals) {
+        uiState.arrivals.firstOrNull()?.subwayList
+            ?.split(",")
+            ?.filter { it.isNotBlank() && it != lineId }
+            ?.mapNotNull { SubwayLine.getLineName(it) }
+            ?: emptyList()
+    }
 
-                    ArrivalInfoSection(
-                        arrivals = arrivalInfo,
-                        line = info.lineNumber,
-                        upDt = upDtLabel,
-                        dnDt = dnDtLabel,
-                        timeTable = timeTable,
-                        activeAlarms = uiState.activeAlarms,
-                        favoriteDirections = favoriteDirections,
-                        onToggleFavoriteDirection = { viewModel.toggleFavoriteDirection(it) },
-                        onSetAlarm = { arr, threshold ->
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                when {
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED -> {
-                                        viewModel.setAlarm(arr, threshold)
-                                    }
-                                    else -> {
-                                        pendingAlarmArrival = arr
-                                        pendingAlarmThreshold = threshold
-                                        showPermissionRationale = true
-                                    }
-                                }
-                            } else {
-                                viewModel.setAlarm(arr, threshold)
-                            }
-                        },
-                        onCancelAlarm = { trainNo -> viewModel.cancelAlarm(trainNo, stationName) }
-                    )
-                    Spacer(Modifier.height(16.dp))
+    var alarmTarget by remember { mutableStateOf<RealtimeArrival?>(null) }
+    var showPermissionRationale by remember { mutableStateOf(false) }
+    var sheetDirection by remember { mutableStateOf<String?>(null) }
 
-                    // 첫차 / 막차 시간표 (로딩 중에도 카드 틀은 유지)
-                    val (upTable, dnTable) = timeTable ?: Pair(null, null)
-                    StationTimeTableCard(upTable, dnTable, upDtLabel, dnDtLabel, uiState.errorMessage)
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                // 지도
-                stationLocation?.let { loc ->
-                    StationMapCard(loc)
-                }
-                Spacer(Modifier.height(16.dp))
-
-                // 역 정보
-                StationInfoCard(address = stationLocation?.address ?: "주소 정보 없음")
-                Spacer(Modifier.height(32.dp))
-            }
-
-            // 액션 버튼바를 위에 띄워서 오버랩 시킴 (공백 제거 효과)
-            StationActionBar(
-                isNotification = uiState.isNotification,
-                viewModel = viewModel,
-                stationInfo = stationInfo?.let { BasicStationInfo(it.stationName, it.lineNumber) },
-                stationLocation = stationLocation,
-                context = context,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = (-32).dp) // 위쪽으로 더 깊게 끌어올려 자연스럽게 오버랩
-            )
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            Toast.makeText(context, "알림 권한이 없으면 도착 정보를 받을 수 없습니다.", Toast.LENGTH_SHORT).show()
+            alarmTarget = null
         }
     }
+
+    // ── 알람 예약 다이얼로그 ─────────────────────────────────────
+    alarmTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { alarmTarget = null },
+            title = { Text("도착 알림 설정", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
+            text = { Text("열차 도착 몇 분 전에 알림을 받을까요?", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(1, 3, 5).forEach { min ->
+                        Button(
+                            onClick = {
+                                viewModel.setAlarm(target, min)
+                                alarmTarget = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) { Text("${min}분 전") }
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { alarmTarget = null }) {
+                    Text("취소", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    if (showPermissionRationale) {
+        AlertDialog(
+            onDismissRequest = { showPermissionRationale = false },
+            title = { Text("알림 권한 필요") },
+            text = { Text("지하철 도착 알림을 받으려면 알림 권한 허용이 필요합니다.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionRationale = false
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }) { Text("확인") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionRationale = false; alarmTarget = null }) { Text("취소") }
+            }
+        )
+    }
+
+    // ── 전체 시간표 시트 ─────────────────────────────────────────
+    sheetDirection?.let { direction ->
+        val schedules = if (direction == upDirection) {
+            uiState.timetable?.first?.schedules ?: emptyList()
+        } else {
+            uiState.timetable?.second?.schedules ?: emptyList()
+        }
+        ModalBottomSheet(
+            onDismissRequest = { sheetDirection = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            FullTimetableSheet(
+                direction = if (direction == upDirection) upLabel else dnLabel,
+                schedules = schedules
+            ) { sheetDirection = null }
+        }
+    }
+
+    /** 알림 아이콘: 그 방향의 가장 빠른 열차로 예약한다 */
+    fun requestAlarm(arrivals: List<RealtimeArrival>) {
+        val target = arrivals.firstOrNull { it.trainNumber.isNotEmpty() } ?: return
+        val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) alarmTarget = target else { alarmTarget = target; showPermissionRationale = true }
+    }
+
+    fun isAlarmOn(arrivals: List<RealtimeArrival>) =
+        arrivals.any { a -> uiState.activeAlarms.any { it.trainNo == a.trainNumber } }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        StationHeader(
+            stationName = stationName,
+            lineNumber = lineNumber,
+            lineColor = lineColor,
+            onLine = onLine,
+            isAnyDirectionFavorite = uiState.favoriteDirections.isNotEmpty(),
+            transferLines = transferLines,
+            onBack = onBack,
+            onToggleFavorite = { viewModel.toggleFavoriteDirection(upDirection) },
+            onCall = { context.dial() },
+            onShare = { context.shareStation(stationName, lineNumber, uiState.stationLocation?.address) },
+            onTransferClick = { name -> onStationClick(stationName, name) }
+        )
+
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ArrivalDirectionCard(
+                directionLabel = upLabel,
+                lineColor = lineColor,
+                arrivals = upArrivals,
+                isAlarmOn = isAlarmOn(upArrivals),
+                onAlarmClick = { requestAlarm(upArrivals) }
+            )
+            ArrivalDirectionCard(
+                directionLabel = dnLabel,
+                lineColor = lineColor,
+                arrivals = dnArrivals,
+                isAlarmOn = isAlarmOn(dnArrivals),
+                onAlarmClick = { requestAlarm(dnArrivals) }
+            )
+
+            StationFirstLastSection(
+                upLabel = upLabel,
+                dnLabel = dnLabel,
+                up = uiState.timetable?.first,
+                down = uiState.timetable?.second,
+                errorMessage = uiState.errorMessage,
+                onOpenFullTimetable = { sheetDirection = upDirection }
+            )
+
+            StationLocationCard(location = uiState.stationLocation)
+        }
+    }
+}
+
+/**
+ * 이 방향의 방면 라벨. `trainLineNm`의 "-" 뒷부분이 다음 역이다.
+ * 값이 없으면 방향 표기(상행/내선)로 되돌린다.
+ */
+private fun List<RealtimeArrival>.directionLabel(fallback: String): String =
+    firstOrNull()?.trainLineName
+        ?.substringAfter("-", "")
+        ?.replace("방면", "")
+        ?.replace("(급행)", "")
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: fallback
+
+private fun Context.dial() {
+    startActivity(Intent(Intent.ACTION_DIAL).apply { data = Uri.parse("tel:15447788") })
+}
+
+private fun Context.shareStation(stationName: String, lineNumber: String, address: String?) {
+    val text = buildString {
+        appendLine("[Ezegot - 지하철 정보 도우미]")
+        appendLine("🚇 $lineNumber ${stationName}역")
+        if (!address.isNullOrBlank()) {
+            appendLine()
+            appendLine("📍 위치: $address")
+        }
+    }.trim()
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    startActivity(Intent.createChooser(intent, "공유하기"))
 }
