@@ -2,6 +2,8 @@ package com.jonghyeok.ezegot.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 
 /*
  * 라이트 팔레트 (목업 v5).
@@ -83,18 +85,67 @@ fun getSubwayLineColor(lineName: String): Color {
 fun onSubwayLineColor(background: Color): Color =
     if (background.luminance() > 0.179f) Color.Black else Color.White
 
+/** 역 상세 헤더의 배경색과 그 위 요소 색 한 쌍 */
+data class SubwayHeaderColors(val background: Color, val content: Color)
+
+/** 헤더 안에는 11sp(호선명·환승 칩)가 섞여 있어 큰 글자 기준(3:1)이 아니라 4.5:1이 필요하다 */
+private const val HEADER_MIN_CONTRAST = 4.5f
+
 /**
- * 큰 글자·아이콘용 노선 위 글자색. 역 상세 헤더처럼 22sp 글자와 아이콘이 얹히는 곳에 쓴다.
+ * 명도를 이 이상 낮춰야 하면 노선 정체성이 무너진 것으로 본다.
  *
- * WCAG는 큰 텍스트(18sp+)와 아이콘 같은 비텍스트 요소에 3:1을 요구한다.
- * 작은 뱃지와 같은 임계(4.5:1)를 쓰면 2호선(#009D3E)처럼 어두운 노선까지
- * 검정으로 뒤집혀, 지하철 표기 관행과 어긋나고 헤더가 탁해 보인다.
- *
- * 임계 0.30은 흰 글자가 3:1을 만족하는 최대 배경 휘도다.
- * 이 값 이하면 흰색(관행), 넘으면 검정으로 간다.
+ * 실측상 보정군의 최대 하락폭은 13pp(3호선), 검정 전환군의 최소는 17pp(우이신설선)로
+ * 그 사이가 비어 있다. 15pp는 그 빈 구간에 놓은 값이다.
  */
-fun onSubwayLineColorLarge(background: Color): Color =
-    if (background.luminance() > 0.30f) Color.Black else Color.White
+private const val MAX_LIGHTNESS_DROP = 0.15f
+
+/**
+ * 역 상세 헤더의 색을 정한다.
+ *
+ * 헤더는 배경이 노선색이고 그 위에 역명(22sp)·호선명(11sp)·환승 칩·아이콘이 모두 얹힌다.
+ * 가장 작은 11sp에 맞춰 4.5:1이 필요한데, 원색 그대로는 절반이 미달한다.
+ * 그렇다고 글자색만 뒤집으면 헤더 안에서 색이 갈린다.
+ *
+ * 그래서 **글자를 바꾸는 대신 배경을 어둡게** 한다. 색상(H)과 채도(S)는 그대로 두고
+ * 명도(L)만 낮추므로 어느 노선인지는 그대로 읽힌다.
+ *
+ * 단 수인분당선(#FABE00)처럼 원래 밝은 노선은 흰 글자를 세우려면 명도를 20pp 넘게
+ * 깎아야 해서 노란색이 갈색이 된다. 그런 노선은 보정하지 않고 검은 글자로 간다.
+ */
+fun subwayLineHeaderColors(lineColor: Color): SubwayHeaderColors {
+    if (contrastRatio(Color.White, lineColor) >= HEADER_MIN_CONTRAST) {
+        return SubwayHeaderColors(lineColor, Color.White)
+    }
+
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(lineColor.toArgb(), hsl)
+    val originalLightness = hsl[2]
+
+    var lightness = originalLightness
+    var candidate = lineColor
+    // 0.1%씩 낮추며 흰 글자가 기준을 넘는 첫 지점을 찾는다
+    while (lightness > 0.002f) {
+        lightness -= 0.001f
+        candidate = Color(ColorUtils.HSLToColor(floatArrayOf(hsl[0], hsl[1], lightness)))
+        if (contrastRatio(Color.White, candidate) >= HEADER_MIN_CONTRAST) break
+    }
+
+    return if (originalLightness - lightness >= MAX_LIGHTNESS_DROP) {
+        SubwayHeaderColors(lineColor, Color.Black)
+    } else {
+        SubwayHeaderColors(candidate, Color.White)
+    }
+}
+
+/**
+ * 헤더 위 칩 배경.
+ *
+ * 예전에는 글자색을 22% 농도로 깔았는데, 글자와 같은 색을 옅게 깐 것이라
+ * 칩 안 명암비가 오히려 3.0까지 떨어졌다. 반대색을 12%로 얹어 배경을 밀어낸다.
+ */
+fun subwayHeaderChipBackground(colors: SubwayHeaderColors): Color =
+    if (colors.content == Color.White) Color.Black.copy(alpha = 0.12f)
+    else Color.White.copy(alpha = 0.12f)
 
 /**
  * 연한 노선색 배경. 주변 역 정사각 뱃지처럼 작은 면적에 쓴다.

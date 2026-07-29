@@ -38,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jonghyeok.ezegot.ui.theme.SubwayHeaderColors
+import com.jonghyeok.ezegot.ui.theme.subwayHeaderChipBackground
 
 /**
  * 역 상세 헤더. 배경이 그 역의 호선색이다.
@@ -45,15 +47,16 @@ import androidx.compose.ui.unit.sp
  * 예전 상단 영역은 220dp를 쓰면서 알람·전화·공유 액션바까지 얹혀 있었다.
  * 사용 빈도가 낮은 기능이 도착 정보보다 위에 있어서, 전화·공유는 ⋮ 메뉴로 내렸다.
  *
- * 글자색은 [onLine]으로 넘겨받는다. 노선색이 밝으면(수인분당선 등) 흰 글씨가
- * 읽히지 않아 호출부가 휘도로 골라준다.
+ * 배경과 글자색은 [colors]로 넘겨받는다. 헤더 안 가장 작은 글자가 11sp라
+ * 4.5:1이 필요한데, 노선 원색 위 흰 글씨는 절반이 미달한다. 호출부가
+ * 배경을 어둡게 보정하거나(색상·채도 유지) 밝은 노선은 검은 글자로 바꿔 넘긴다.
+ * `subwayLineHeaderColors()` 참고.
  */
 @Composable
 internal fun StationHeader(
     stationName: String,
     lineNumber: String,
-    lineColor: Color,
-    onLine: Color,
+    colors: SubwayHeaderColors,
     isAnyDirectionFavorite: Boolean,
     transferLines: List<String>,
     onBack: () -> Unit,
@@ -62,12 +65,13 @@ internal fun StationHeader(
     onShare: () -> Unit,
     onTransferClick: (String) -> Unit
 ) {
+    val onLine = colors.content
     var menuOpen by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(lineColor)
+            .background(colors.background)
             .padding(bottom = 14.dp)
     ) {
         // 상단 행 – 뒤로 / 별 / 더보기
@@ -138,7 +142,7 @@ internal fun StationHeader(
                 transferLines.forEach { name ->
                     HeaderChip(
                         text = "환승 $name",
-                        onLine = onLine,
+                        colors = colors,
                         onClick = { onTransferClick(name) }
                     )
                 }
@@ -149,18 +153,18 @@ internal fun StationHeader(
 
 /** 헤더 위 반투명 칩. 배경이 노선색이라 흰 계열을 alpha로 얹는다 */
 @Composable
-private fun HeaderChip(text: String, onLine: Color, onClick: (() -> Unit)? = null) {
+private fun HeaderChip(text: String, colors: SubwayHeaderColors, onClick: (() -> Unit)? = null) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(onLine.copy(alpha = 0.22f))
+            .background(subwayHeaderChipBackground(colors))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 9.dp, vertical = 4.dp)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-            color = onLine,
+            color = colors.content,
             maxLines = 1
         )
     }

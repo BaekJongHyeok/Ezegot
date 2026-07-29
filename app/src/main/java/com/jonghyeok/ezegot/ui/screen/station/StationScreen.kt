@@ -46,7 +46,7 @@ import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.dto.directionPairFor
 import com.jonghyeok.ezegot.dto.matchesDirection
 import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
-import com.jonghyeok.ezegot.ui.theme.onSubwayLineColorLarge
+import com.jonghyeok.ezegot.ui.theme.subwayLineHeaderColors
 import com.jonghyeok.ezegot.viewModel.StationViewModel
 
 /**
@@ -75,7 +75,9 @@ fun StationScreen(
     }
 
     val lineColor = getSubwayLineColor(lineNumber)
-    val onLine = onSubwayLineColorLarge(lineColor)
+    // 헤더는 배경을 어둡게 보정해 11sp까지 4.5:1을 맞춘다. 도착 카드의 점·뱃지는
+    // 아래에서 원색(lineColor)을 그대로 쓴다 — 공식 색을 바꾸는 것은 헤더 배경뿐이다.
+    val headerColors = subwayLineHeaderColors(lineColor)
     val lineId = SubwayLine.getLineId(lineNumber)
     val (upDirection, dnDirection) = directionPairFor(lineNumber)
 
@@ -207,8 +209,7 @@ fun StationScreen(
         StationHeader(
             stationName = stationName,
             lineNumber = lineNumber,
-            lineColor = lineColor,
-            onLine = onLine,
+            colors = headerColors,
             isAnyDirectionFavorite = uiState.favoriteDirections.isNotEmpty(),
             transferLines = transferLines,
             onBack = onBack,
