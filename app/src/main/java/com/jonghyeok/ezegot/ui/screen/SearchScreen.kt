@@ -45,6 +45,7 @@ fun SearchScreen(
     val filteredStations by viewModel.filteredStations.collectAsState()
     val recentSearches by viewModel.recentSearches.collectAsState()
     val allStations by viewModel.allStationsInfoList.collectAsState()
+    val lastFilteredQuery by viewModel.lastFilteredQuery.collectAsState()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
@@ -146,20 +147,35 @@ fun SearchScreen(
         }
 
         // ── 검색 결과 or 최근검색 ────────────────────────────────
-        if (textState.text.isNotEmpty() && filteredStations.isNotEmpty()) {
-            SearchResultList(
-                stations = filteredStations,
-                onItemClick = { station ->
-                    viewModel.saveRecentSearch(station.stationName, station.lineNumber)
-                    onStationClick(station.stationName, station.lineNumber)
-                }
-            )
-        } else if (textState.text.isEmpty()) {
-            RecentSearchList(
-                recentSearches = recentSearches,
-                onItemClick = { item -> onStationClick(item.stationName, item.lineNumber) },
-                onDelete = { item -> viewModel.deleteRecentSearch(item.stationName, item.lineNumber) }
-            )
+        // "결과 0건" 안내는 이 검색어로 filter가 실제 실행됐고(lastFilteredQuery)
+        // 역 목록도 로드된 뒤에만 띄운다. 그 전의 0건은 아직 모르는 상태라
+        // 안내를 띄우면 debounce 200ms 동안 잘못된 문구가 깜빡인다.
+        val filterSettled = lastFilteredQuery == textState.text && allStations.isNotEmpty()
+        when {
+            textState.text.isNotEmpty() && filteredStations.isNotEmpty() -> {
+                SearchResultList(
+                    stations = filteredStations,
+                    onItemClick = { station ->
+                        viewModel.saveRecentSearch(station.stationName, station.lineNumber)
+                        onStationClick(station.stationName, station.lineNumber)
+                    }
+                )
+            }
+            textState.text.isNotEmpty() && filterSettled -> {
+                EmptyStateView(
+                    icon = Icons.Default.Search,
+                    title = "검색 결과가 없습니다",
+                    description = "역 이름을 다시 확인해 주세요",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            textState.text.isEmpty() -> {
+                RecentSearchList(
+                    recentSearches = recentSearches,
+                    onItemClick = { item -> onStationClick(item.stationName, item.lineNumber) },
+                    onDelete = { item -> viewModel.deleteRecentSearch(item.stationName, item.lineNumber) }
+                )
+            }
         }
     }
 }
@@ -204,6 +220,17 @@ fun RecentSearchList(
     onItemClick: (BasicStationInfo) -> Unit,
     onDelete: (BasicStationInfo) -> Unit
 ) {
+    if (recentSearches.isEmpty()) {
+        // 앱 첫 실행 시 반드시 마주치는 화면이라 안내가 없으면 백지로 보인다
+        EmptyStateView(
+            icon = Icons.Default.Search,
+            title = "최근 검색 기록이 없습니다",
+            description = "역 이름을 검색해 보세요",
+            modifier = Modifier.fillMaxSize()
+        )
+        return
+    }
+
     Column(modifier = Modifier.padding(top = 24.dp)) {
         if (recentSearches.isNotEmpty()) {
             Row(

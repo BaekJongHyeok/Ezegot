@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -390,22 +391,39 @@ fun ArrivalColumn(modifier: Modifier, direction: String, arrivals: List<Realtime
     }
 }
 
+/**
+ * 데이터가 없을 때 쓰는 공통 빈 상태.
+ *
+ * 아이콘·제목·설명 3단 구조를 화면 간에 동일하게 유지하려고 하나로 모았다.
+ */
 @Composable
-fun EmptyFavoriteView() {
+internal fun EmptyStateView(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    modifier: Modifier = Modifier.fillMaxWidth().height(200.dp)
+) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp),
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.LocationOn, contentDescription = null, tint = TextHint, modifier = Modifier.size(36.dp))
+            Icon(icon, contentDescription = null, tint = TextHint, modifier = Modifier.size(36.dp))
             Spacer(Modifier.height(10.dp))
-            Text("즐겨찾기를 추가해보세요", style = MaterialTheme.typography.bodyMedium, color = TextHint)
+            Text(title, style = MaterialTheme.typography.bodyMedium, color = TextHint)
             Spacer(Modifier.height(4.dp))
-            Text("역 상세에서 ★을 눌러 추가할 수 있어요", style = MaterialTheme.typography.bodySmall, color = TextHint)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = TextHint)
         }
     }
+}
+
+@Composable
+fun EmptyFavoriteView() {
+    EmptyStateView(
+        icon = Icons.Default.LocationOn,
+        title = "즐겨찾기를 추가해보세요",
+        description = "역 상세에서 ★을 눌러 추가할 수 있어요"
+    )
 }
 
 // ── KTX 배너 (최소화) ─────────────────────────────────────────────
@@ -510,6 +528,36 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
                         lineColors = lineColors,
                         isSelected = isAnySelected,
                         stationName = stationsAtPos.first().stationName
+                    )
+                }
+            }
+        }
+
+        // 반경 내 역이 없을 때. 지도(현재 위치)는 그대로 두고 안내만 얹는다.
+        if (nearbyStations.isEmpty()) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 32.dp),
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 4.dp,
+                color = SurfaceWhite
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "근처에 지하철역이 없습니다",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "현재 위치에서 3km 안에 표시할 역이 없어요",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
                     )
                 }
             }
