@@ -88,7 +88,7 @@ internal fun FullTimetableSheet(
                         Text(
                             text = direction,
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
@@ -97,7 +97,7 @@ internal fun FullTimetableSheet(
                     Text(
                         "하루 시간표",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -149,7 +149,7 @@ internal fun FullTimetableSheet(
                         Text(
                             text = "${hour}시",
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                            // 선택 상태는 배경색과 테두리로 이미 구분된다
                             color = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
@@ -192,7 +192,7 @@ internal fun FullTimetableSheet(
                                 Text(
                                     "${hour}시",
                                     style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = if (isCurrentHour) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                    // 현재 시간대는 옆의 NOW 배지로 구분된다
                                     color = if (isPastHour) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
                                 )
                                 if (isCurrentHour) {
@@ -202,7 +202,7 @@ internal fun FullTimetableSheet(
                                             "NOW",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onError,
-                                            fontWeight = FontWeight.ExtraBold,
+                                            fontWeight = FontWeight.Medium,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                         )
                                     }
@@ -260,7 +260,8 @@ internal fun FullTimetableSheet(
                                         Text(
                                             text = "${hour}:${schedule.leftTime.substring(3, 5)}",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = if (isNext) FontWeight.ExtraBold else FontWeight.Medium,
+                                            // 다음 열차는 칩 배경(primary)과 그림자로 구분된다
+                                            fontWeight = FontWeight.Medium,
                                             color = timeColor
                                         )
                                         if (schedule.destination.isNotEmpty() || schedule.isExpressTrain()) {
@@ -271,7 +272,7 @@ internal fun FullTimetableSheet(
                                                         text = "급행",
                                                         style = MaterialTheme.typography.labelSmall,
                                                         color = MaterialTheme.colorScheme.error,
-                                                        fontWeight = FontWeight.Bold,
+                                                        fontWeight = FontWeight.Medium,
                                                         modifier = Modifier.padding(end = 4.dp)
                                                     )
                                                 }

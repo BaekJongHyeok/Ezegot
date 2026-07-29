@@ -150,7 +150,7 @@ private fun NearbyMapBody(viewModel: MainViewModel, onStationClick: (String, Str
                         text = "근처에 지하철역이 없습니다",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = "현재 위치에서 3km 안에 표시할 역이 없어요",
@@ -199,7 +199,7 @@ private fun NearbyMapBody(viewModel: MainViewModel, onStationClick: (String, Str
                             text = "${station.stationName} ${station.lineNumber}",
                             style = MaterialTheme.typography.labelMedium,
                             color = if (isSelected) onSubwayLineColor(lineColor) else MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -256,7 +256,7 @@ private fun NearbyMapBody(viewModel: MainViewModel, onStationClick: (String, Str
                                         text = station.stationName,
                                         style = MaterialTheme.typography.titleLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Medium
                                     )
                                     Surface(shape = RoundedCornerShape(6.dp), color = lineColor) {
                                         Text(
@@ -368,7 +368,7 @@ fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName:
                     text = stationName,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                 )
             }
@@ -421,7 +421,7 @@ fun LocationUnavailableCard(onRetry: () -> Unit) {
                     text = "위치를 가져올 수 없습니다",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "실내에서는 신호가 약할 수 있어요. GPS가 켜져 있는지 확인해 주세요",
@@ -484,7 +484,7 @@ fun LocationGuideCard(isPermissionGranted: Boolean) {
                     text = if (!isPermissionGranted) "위치 권한 필요" else "GPS를 켜주세요",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = if (!isPermissionGranted) "근처 역을 보려면 위치 권한을 허용해 주세요"
