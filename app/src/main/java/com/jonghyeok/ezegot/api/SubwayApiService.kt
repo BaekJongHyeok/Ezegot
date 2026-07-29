@@ -44,7 +44,9 @@ interface SubwayApiService {
         @Path("apiKey") apiKey: String,
         @Path("stationCode") stationCode: String,
         @Path("weekCode") weekCode: String,     // 1:평일, 2:토요일, 3:휴일/일요일
-        @Path("upDownCode") upDownCode: String  // 1:상행/내선, 2:하행/외선
+        // 이름과 달리 1이 하행, 2가 상행이다. 문서에는 반대로 적혀 있으나
+        // 7호선 강남구청·4호선 사당·1호선 남영 응답이 모두 1=남행, 2=북행이었다.
+        @Path("upDownCode") upDownCode: String
     ): TimeTableResponse
 
     /** [공공데이터포털] TAGO 지하철 정보 – 역 목록 조회 (역명으로 ID 찾기) */

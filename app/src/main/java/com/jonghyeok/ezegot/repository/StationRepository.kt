@@ -135,8 +135,11 @@ class StationRepository @Inject constructor(
 
             if (!frCode.isNullOrEmpty()) {
                 val weekCode = if (isWeekend) "2" else "1"
-                up = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "1") }.getOrNull()
-                down = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "2") }.getOrNull()
+                // 서울 API의 upDownCode는 1이 하행, 2가 상행이다. 이름과 반대라
+                // "1"을 up에 넣고 있었고, 첫차·막차와 시간표 방향이 통째로 뒤바뀌어 있었다.
+                // 7호선 강남구청·4호선 사당·1호선 남영에서 교차 확인했다.
+                up = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "2") }.getOrNull()
+                down = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "1") }.getOrNull()
             }
 
             val upEmpty = up == null || up.schedules.isEmpty()
