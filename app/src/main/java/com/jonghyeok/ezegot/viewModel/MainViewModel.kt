@@ -49,11 +49,21 @@ class MainViewModel @Inject constructor(
     private val _nearbyStationList = MutableStateFlow<List<NearbyStation>>(emptyList())
     val nearbyStationList: StateFlow<List<NearbyStation>> = _nearbyStationList.asStateFlow()
 
+    // ── 현재 위치 ────────────────────────────────────────────────
+    private val _locationState = MutableStateFlow<LocationState>(LocationState.Loading)
+    val locationState: StateFlow<LocationState> = _locationState.asStateFlow()
+
     private var stationNameMap: Map<String, List<StationInfo>> = emptyMap()
     private var locationsCache: List<StationInfoResponse> = emptyList()
 
     // 새로고침 시 이전 Job 취소용
     private var arrivalJob: Job? = null
+
+    // 위치 조회 Job. 중복 실행 방지 및 재시도 시 취소용
+    private var locationJob: Job? = null
+
+    // 초기 데이터(역 목록·위경도) 로드 Job. 근처 역 계산이 이 완료를 기다린다
+    private var initialDataJob: Job? = null
 
     init {
         loadInitialData()
@@ -62,7 +72,7 @@ class MainViewModel @Inject constructor(
 
     // ── 초기 데이터 로드 ─────────────────────────────────────────
     private fun loadInitialData() {
-        viewModelScope.launch {
+        initialDataJob = viewModelScope.launch {
             val stationsDeferred  = launch { mainRepository.getAllStations().let { s ->
                 stationNameMap = s.groupBy { it.stationName }
             }}
@@ -134,21 +144,49 @@ class MainViewModel @Inject constructor(
     }
 
     // ── GPS – Two-phase 패턴 ──────────────────────────────────────
+    /**
+     * 현재 위치를 조회하고 [locationState]에 반영한다.
+     *
+     * Phase 1은 Repository가 담당한다(캐시된 위치 → 없으면 첫 fix 대기).
+     * 제한 시간 안에 하나도 못 얻으면 [LocationState.Unavailable]로 확정해
+     * 화면이 기본 좌표에 머무르는 대신 상태를 보여줄 수 있게 한다.
+     * Phase 2는 이후 지속 갱신으로 더 정확한 위치를 반영한다.
+     */
     fun updateCurrentLocation() {
-        viewModelScope.launch {
-            // Phase 1: 캐시된 마지막 위치로 즉시 처리
-            locationRepository.getLastKnownLocation()?.let { lastLoc ->
-                fetchNearbyStations(lastLoc.latitude, lastLoc.longitude)
+        // 이미 조회 중이면 중복 실행하지 않는다 (탭 전환 시 재호출 방지)
+        if (locationJob?.isActive == true) return
+
+        locationJob = viewModelScope.launch {
+            _locationState.value = LocationState.Loading
+
+            val first = locationRepository.getCurrentLocation()
+            if (first == null) {
+                _locationState.value = LocationState.Unavailable
+                return@launch
             }
+            _locationState.value = LocationState.Available(first.latitude, first.longitude)
+            fetchNearbyStations(first.latitude, first.longitude)
+
             // Phase 2: 지속 GPS 갱신
             locationRepository.requestLocationUpdates().collect { location ->
+                _locationState.value = LocationState.Available(location.latitude, location.longitude)
                 fetchNearbyStations(location.latitude, location.longitude)
             }
         }
     }
 
+    /** 위치 조회 실패 후 사용자가 다시 시도할 때 호출한다. */
+    fun retryLocation() {
+        locationJob?.cancel()
+        locationJob = null
+        updateCurrentLocation()
+    }
+
     // ── 근처 역 계산 ──────────────────────────────────────────────
     private suspend fun fetchNearbyStations(lat: Double, lon: Double) {
+        // 위경도 목록이 아직 로드 전이면 빈 결과가 나오므로 완료를 기다린다
+        initialDataJob?.join()
+
         val result = withContext(Dispatchers.Default) {
             locationsCache
                 .filter { abs(lat - it.latitude) < 0.04 && abs(lon - it.longitude) < 0.05 }

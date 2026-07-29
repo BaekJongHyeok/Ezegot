@@ -37,7 +37,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -46,6 +45,7 @@ import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.NearbyStation
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.ui.theme.*
+import com.jonghyeok.ezegot.viewModel.LocationState
 import com.jonghyeok.ezegot.viewModel.MainViewModel
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -442,6 +442,7 @@ fun KtxBannerMinimal(context: Context) {
 fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit) {
     val context = LocalContext.current
     val nearbyStations by viewModel.nearbyStationList.collectAsState()
+    val locationState by viewModel.locationState.collectAsState()
 
     val isPermissionGranted = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -452,29 +453,30 @@ fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit
         return
     }
 
+    // 권한·GPS는 정상인데 위치를 못 얻는 경우가 있다(캐시 없음 + 첫 fix 지연).
+    // 기본 좌표 지도를 그대로 보여주면 실패가 드러나지 않으므로 상태로 표현한다.
+    val available = locationState as? LocationState.Available
+    if (available == null) {
+        if (locationState is LocationState.Unavailable) {
+            LocationUnavailableCard(onRetry = { viewModel.retryLocation() })
+        } else {
+            LocationLoadingCard()
+        }
+        return
+    }
+
     val cameraPositionState = rememberCameraPositionState()
     var selectedStation by remember { mutableStateOf<NearbyStation?>(null) }
     var mapInitialized by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Map initial center logic
-    LaunchedEffect(nearbyStations) {
-        if (!mapInitialized && nearbyStations.isNotEmpty()) {
-            val fusedClient = LocationServices.getFusedLocationProviderClient(context)
-            try {
-                fusedClient.lastLocation.addOnSuccessListener { loc ->
-                    loc?.let {
-                        val latLng = LatLng(it.latitude, it.longitude)
-                        cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(latLng, 14f))
-                        mapInitialized = true
-                    } ?: run {
-                        // Fallback: Default to first station if lastLocation is null
-                        val firstLoc = LatLng(nearbyStations.first().latitude, nearbyStations.first().longitude)
-                        cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(firstLoc, 14f))
-                        mapInitialized = true
-                    }
-                }
-            } catch (e: SecurityException) { }
+    // 지도 초기 중심 – 위치를 얻는 즉시 이동한다.
+    // 근처 역 목록을 기다리지 않는다. 목록이 비어도 현재 위치는 보여야 하기 때문이다.
+    LaunchedEffect(available.latitude, available.longitude) {
+        if (!mapInitialized) {
+            val latLng = LatLng(available.latitude, available.longitude)
+            cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(latLng, 14f))
+            mapInitialized = true
         }
     }
 
@@ -720,6 +722,75 @@ fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName:
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                 )
+            }
+        }
+    }
+}
+
+// ── 위치 조회 상태 카드 ──────────────────────────────────────────
+/** 위치를 확인하는 중. 권한·GPS는 정상이므로 안내 대신 진행 상황만 보여준다. */
+@Composable
+fun LocationLoadingCard() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CircularProgressIndicator(color = SkyBlue400, modifier = Modifier.size(36.dp))
+            Text(
+                text = "위치를 확인하는 중",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
+            )
+        }
+    }
+}
+
+/** 제한 시간 안에 위치를 못 얻은 경우. 재시도 수단을 함께 준다. */
+@Composable
+fun LocationUnavailableCard(onRetry: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.85f),
+            shape = RoundedCornerShape(16.dp),
+            shadowElevation = 4.dp,
+            color = SurfaceWhite
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = TextHint, modifier = Modifier.size(36.dp))
+                Text(
+                    text = "위치를 가져올 수 없습니다",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "실내에서는 신호가 약할 수 있어요. GPS가 켜져 있는지 확인해 주세요",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Surface(
+                    modifier = Modifier.clickable { onRetry() },
+                    shape = RoundedCornerShape(8.dp),
+                    color = SkyBlue400
+                ) {
+                    Text(
+                        text = "다시 시도",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
             }
         }
     }

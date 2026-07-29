@@ -18,27 +18,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
-import com.google.android.gms.location.LocationServices
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.jonghyeok.ezegot.ui.theme.*
+import com.jonghyeok.ezegot.viewModel.LocationState
+import com.jonghyeok.ezegot.viewModel.MainViewModel
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun MapScreen(
     onBack: () -> Unit,
-    onSearchClick: (() -> Unit)? = null
+    onSearchClick: (() -> Unit)? = null,
+    viewModel: MainViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(false) }
-    val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val cameraPositionState = rememberCameraPositionState()
-    var currentLocation by remember { mutableStateOf<LatLng?>(null) }
+    val locationState by viewModel.locationState.collectAsState()
+    var mapInitialized by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> hasPermission = granted }
+    ) { granted ->
+        hasPermission = granted
+        if (granted) viewModel.retryLocation()
+    }
 
     LaunchedEffect(Unit) {
         hasPermission = ActivityCompat.checkSelfPermission(
@@ -48,23 +54,33 @@ fun MapScreen(
         if (!hasPermission) {
             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         } else {
-            fusedClient.lastLocation.addOnSuccessListener { loc ->
-                loc?.let {
-                    val latLng = LatLng(it.latitude, it.longitude)
-                    currentLocation = latLng
-                    cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
-                }
-            }
+            viewModel.updateCurrentLocation()
+        }
+    }
+
+    // 첫 위치를 얻었을 때 한 번만 카메라를 옮긴다. 이후 갱신으로 사용자의 조작을 덮지 않는다.
+    LaunchedEffect(locationState) {
+        val loc = locationState as? LocationState.Available ?: return@LaunchedEffect
+        if (!mapInitialized) {
+            cameraPositionState.move(
+                CameraUpdateFactory.newLatLngZoom(LatLng(loc.latitude, loc.longitude), 15f)
+            )
+            mapInitialized = true
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (hasPermission) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = true)
-            )
+            // 위치를 못 얻으면 기본 좌표 지도를 그대로 두지 않고 상태를 보여준다
+            when (locationState) {
+                is LocationState.Loading -> LocationLoadingCard()
+                is LocationState.Unavailable -> LocationUnavailableCard(onRetry = { viewModel.retryLocation() })
+                is LocationState.Available -> GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    properties = MapProperties(isMyLocationEnabled = true)
+                )
+            }
         } else {
             Box(
                 modifier = Modifier

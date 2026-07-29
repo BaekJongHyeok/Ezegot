@@ -6,6 +6,7 @@ import com.jonghyeok.ezegot.alarm.SubwayAlarmManager
 import com.jonghyeok.ezegot.db.SubwayAlarmDao
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.repository.FavoriteRepository
+import com.jonghyeok.ezegot.repository.LocationRepository
 import com.jonghyeok.ezegot.repository.StationRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -35,6 +36,7 @@ class StationViewModelTest {
 
     private lateinit var stationRepository: StationRepository
     private lateinit var favoriteRepository: FavoriteRepository
+    private lateinit var locationRepository: LocationRepository
     private lateinit var alarmManager: SubwayAlarmManager
     private lateinit var alarmDao: SubwayAlarmDao
 
@@ -42,6 +44,7 @@ class StationViewModelTest {
     fun setUp() {
         stationRepository = mockk()
         favoriteRepository = mockk(relaxed = true)
+        locationRepository = mockk(relaxed = true)
         alarmManager = mockk(relaxed = true)
         alarmDao = mockk()
 
@@ -52,6 +55,7 @@ class StationViewModelTest {
     private fun createViewModel() = StationViewModel(
         stationRepository = stationRepository,
         favoriteRepository = favoriteRepository,
+        locationRepository = locationRepository,
         alarmManager = alarmManager,
         alarmDao = alarmDao
     )

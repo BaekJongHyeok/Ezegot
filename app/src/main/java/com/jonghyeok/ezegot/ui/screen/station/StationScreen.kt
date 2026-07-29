@@ -32,8 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.model.LatLng
 import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
@@ -55,7 +53,6 @@ fun StationScreen(
     onStationClick: (String, String) -> Unit
 ) {
     val context = LocalContext.current
-    val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val uiState by viewModel.uiState.collectAsState()
 
     val stationInfo = uiState.stationInfo
@@ -114,22 +111,13 @@ fun StationScreen(
 
     val timeTable = uiState.timetable
 
-    LaunchedEffect(stationLocation) {
-        stationLocation?.let {
-            viewModel.loadAdvancedStationInfo(stationName, lineNumber)
-        }
-    }
-
+    // 시간표는 위치와 무관하다. 예전에는 stationLocation을 키로 삼아,
+    // 위치 권한이 없으면 시간표까지 로드되지 않았다.
     LaunchedEffect(stationName) {
         viewModel.loadStationInfo(stationName, lineNumber)
         viewModel.loadArrivalInfo(stationName)
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-            == PackageManager.PERMISSION_GRANTED) {
-            fusedClient.lastLocation.addOnSuccessListener { loc ->
-                val defaultLatLng = LatLng(loc?.latitude ?: 37.5665, loc?.longitude ?: 126.9780)
-                viewModel.loadStationLocation(stationName, defaultLatLng)
-            }
-        }
+        viewModel.loadAdvancedStationInfo(stationName, lineNumber)
+        viewModel.loadStationLocation(stationName)
     }
 
     Column(modifier = Modifier.fillMaxSize().background(BackgroundLight)) {

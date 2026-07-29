@@ -2,13 +2,13 @@ package com.jonghyeok.ezegot.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.maps.model.LatLng
 import com.jonghyeok.ezegot.alarm.SubwayAlarmManager
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.db.SubwayAlarmDao
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.repository.FavoriteRepository
+import com.jonghyeok.ezegot.repository.LocationRepository
 import com.jonghyeok.ezegot.repository.StationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +25,7 @@ import javax.inject.Inject
 class StationViewModel @Inject constructor(
     private val stationRepository: StationRepository,
     private val favoriteRepository: FavoriteRepository,
+    private val locationRepository: LocationRepository,
     private val alarmManager: SubwayAlarmManager,
     private val alarmDao: SubwayAlarmDao
 ) : ViewModel() {
@@ -106,7 +107,14 @@ class StationViewModel @Inject constructor(
         _uiState.update { it.copy(isNotification = !it.isNotification) }
     }
 
-    fun loadStationLocation(stationName: String, defaultLocation: LatLng) {
+    /**
+     * 역 위치를 불러온다.
+     *
+     * 역 위경도 목록에서 찾지 못했을 때만 "현재 위치"를 대신 채운다.
+     * 그 좌표는 이전에 화면이 넘겨주던 것을 Repository 조회로 옮겼고,
+     * 위치를 얻지 못하면 서울시청 좌표를 쓴다(기존 동작과 동일).
+     */
+    fun loadStationLocation(stationName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val locations = stationRepository.getStationsLocationList()
             var target = locations.find { it.stationName == stationName }
@@ -116,14 +124,20 @@ class StationViewModel @Inject constructor(
                 target = target.copy(address = address)
             }
 
-            val result = target ?: StationInfoResponse(
-                stationId = "default",
-                stationName = "현재 위치",
-                lineName = "N/A",
-                longitude = defaultLocation.longitude,
-                latitude = defaultLocation.latitude,
-                address = stationRepository.getAddress(defaultLocation.latitude, defaultLocation.longitude)
-            )
+            val result = target ?: run {
+                // 역을 못 찾은 경우에만 현재 위치가 필요하다
+                val current = locationRepository.getCurrentLocation()
+                val lat = current?.latitude ?: FALLBACK_LATITUDE
+                val lon = current?.longitude ?: FALLBACK_LONGITUDE
+                StationInfoResponse(
+                    stationId = "default",
+                    stationName = "현재 위치",
+                    lineName = "N/A",
+                    longitude = lon,
+                    latitude = lat,
+                    address = stationRepository.getAddress(lat, lon)
+                )
+            }
 
             withContext(Dispatchers.Main) {
                 _uiState.update { it.copy(stationLocation = result) }
@@ -154,5 +168,11 @@ class StationViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    companion object {
+        // 위치를 얻지 못했을 때 쓰는 대체 좌표 (서울시청)
+        private const val FALLBACK_LATITUDE = 37.5665
+        private const val FALLBACK_LONGITUDE = 126.9780
     }
 }

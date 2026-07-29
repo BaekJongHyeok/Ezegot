@@ -10,7 +10,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -82,8 +84,29 @@ class LocationRepository @Inject constructor(
         awaitClose { fusedClient.removeLocationUpdates(callback) }
     }
 
+    // ── 단발성 조회 (Phase 1 → Phase 2 폴백) ────────────────────
+    /**
+     * 현재 위치를 한 번만 얻는다. 위치가 필요하지만 지속 갱신은 필요 없는 화면용.
+     *
+     * [getLastKnownLocation]은 캐시가 비어 있으면 null을 반환하는데(앱 첫 실행,
+     * 재부팅 직후, 기기가 오래 꺼져 있던 경우), 이때 폴백이 없으면 화면이 조용히
+     * 실패한다. 그래서 null이면 [requestLocationUpdates]의 첫 fix를 기다린다.
+     *
+     * @param timeoutMs 첫 fix 대기 한도. 초과하면 null을 반환하며,
+     *                  호출한 쪽이 "위치를 가져올 수 없음" 상태를 표현해야 한다.
+     */
+    suspend fun getCurrentLocation(timeoutMs: Long = DEFAULT_FIX_TIMEOUT_MS): Location? =
+        getLastKnownLocation() ?: withTimeoutOrNull(timeoutMs) {
+            requestLocationUpdates().firstOrNull()
+        }
+
     private fun hasPermission(): Boolean =
         ActivityCompat.checkSelfPermission(
             context, android.Manifest.permission.ACCESS_FINE_LOCATION
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    companion object {
+        /** 첫 fix 대기 한도. 실내 등 수신이 나쁜 환경에서 무한 대기하지 않도록 둔다. */
+        const val DEFAULT_FIX_TIMEOUT_MS = 5_000L
+    }
 }
