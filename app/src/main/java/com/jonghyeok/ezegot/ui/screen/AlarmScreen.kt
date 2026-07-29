@@ -35,9 +35,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.db.SubwayAlarmEntity
-import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
-import com.jonghyeok.ezegot.ui.theme.subwayLineOnTint
-import com.jonghyeok.ezegot.ui.theme.subwayLineTint
 import com.jonghyeok.ezegot.viewModel.AlarmViewModel
 
 /**
@@ -96,7 +93,6 @@ fun AlarmScreen(viewModel: AlarmViewModel = hiltViewModel()) {
 @Composable
 private fun AlarmRow(alarm: SubwayAlarmEntity, onCancel: () -> Unit) {
     val lineName = SubwayLine.getLineName(alarm.lineNumber) ?: alarm.lineNumber
-    val lineColor = getSubwayLineColor(lineName)
 
     Column(
         modifier = Modifier
@@ -107,7 +103,7 @@ private fun AlarmRow(alarm: SubwayAlarmEntity, onCancel: () -> Unit) {
             .padding(13.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            LineSquareBadge(lineName = lineName, lineColor = lineColor)
+            SubwayLineIcon(lineName = lineName)
             Spacer(Modifier.size(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -133,40 +129,6 @@ private fun AlarmRow(alarm: SubwayAlarmEntity, onCancel: () -> Unit) {
             }
         }
     }
-}
-
-/** 30dp 정사각 라운드 노선 뱃지. 연한 노선색 배경 + 진한 노선색 텍스트 */
-@Composable
-internal fun LineSquareBadge(
-    lineName: String,
-    lineColor: androidx.compose.ui.graphics.Color,
-    size: androidx.compose.ui.unit.Dp = 30.dp
-) {
-    val tint = subwayLineTint(lineColor)
-    // 연한 배경은 흰 카드 위에 얹히므로, 대비 계산의 기준도 카드 색이다
-    val onTint = subwayLineOnTint(lineColor, MaterialTheme.colorScheme.surface)
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(RoundedCornerShape(9.dp))
-            .background(tint),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = lineName.toBadgeLabel(),
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-            color = onTint,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-/** "2호선" → "2", "수인분당선" → "수인", "GTX-A" → "A" */
-internal fun String.toBadgeLabel(): String {
-    val digits = filter { it.isDigit() }.trimStart('0')
-    if (digits.isNotEmpty()) return digits
-    if (startsWith("GTX")) return substringAfter("-").ifEmpty { "GTX" }
-    return removeSuffix("선").take(2)
 }
 
 /** 탭 화면 공통 헤더. 흰 배경 48dp */

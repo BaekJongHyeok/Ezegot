@@ -209,22 +209,17 @@ fun SearchResultList(stations: List<StationInfo>, onItemClick: (StationInfo) -> 
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                // 돋보기 아이콘은 행마다 반복돼도 알려주는 것이 없다.
+                // 그 자리를 호선 아이콘으로 바꾸면 어느 노선인지 바로 보인다.
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    SubwayLineIcon(lineName = station.lineNumber)
                     Text(text = station.stationName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 }
-                val lineColor = getSubwayLineColor(station.lineNumber)
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = lineColor
-                ) {
-                    Text(
-                        text = station.lineNumber.removePrefix("0"),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = onSubwayLineColor(lineColor),
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
+                Text(
+                    text = station.lineNumber.removePrefix("0"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 20.dp))
         }
@@ -275,8 +270,8 @@ fun RecentSearchList(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SubwayLineIcon(lineName = item.lineNumber)
                         Column {
                             Text(text = item.stationName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                             Text(

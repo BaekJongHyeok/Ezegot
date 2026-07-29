@@ -276,11 +276,7 @@ private fun FavoriteCarouselCard(
                     if (index > 0) {
                         HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                     }
-                    CarouselArrivalRow(
-                        direction = direction,
-                        arrival = arrival,
-                        isFirst = index == 0
-                    )
+                    CarouselArrivalRow(direction = direction, arrival = arrival)
                 }
             }
         }
@@ -308,8 +304,7 @@ private fun TranslucentChip(text: String, onLine: androidx.compose.ui.graphics.C
 @Composable
 private fun CarouselArrivalRow(
     direction: String,
-    arrival: RealtimeArrival,
-    isFirst: Boolean
+    arrival: RealtimeArrival
 ) {
     Row(
         modifier = Modifier
@@ -399,7 +394,6 @@ private fun NearbyStationRow(
     arrival: RealtimeArrival?,
     onClick: () -> Unit
 ) {
-    val lineColor = getSubwayLineColor(station.lineNumber)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -407,7 +401,7 @@ private fun NearbyStationRow(
             .padding(horizontal = 13.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        LineSquareBadge(lineName = station.lineNumber, lineColor = lineColor)
+        SubwayLineIcon(lineName = station.lineNumber)
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -476,7 +470,6 @@ private fun OverflowFavoriteRow(
     arrivals: List<Pair<String, RealtimeArrival>>,
     onClick: () -> Unit
 ) {
-    val lineColor = getSubwayLineColor(favorite.lineNumber)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -484,7 +477,7 @@ private fun OverflowFavoriteRow(
             .padding(horizontal = 13.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        LineSquareBadge(lineName = favorite.lineNumber, lineColor = lineColor)
+        SubwayLineIcon(lineName = favorite.lineNumber)
         Spacer(Modifier.width(10.dp))
         Text(
             text = favorite.stationName,
