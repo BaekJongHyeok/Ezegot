@@ -27,7 +27,13 @@ data class StationUiState(
     val timetable: Pair<TimeTableResponse?, TimeTableResponse?>? = null,
 
     val stationLocation: StationInfoResponse? = null,
-    val isFavorite: Boolean = false,
+
+    /**
+     * 이 역에서 즐겨찾기에 담아둔 방향들("상행"/"하행"/"내선"/"외선").
+     *
+     * 즐겨찾기 단위가 역이 아니라 방향이라 Boolean 하나로는 표현할 수 없다.
+     */
+    val favoriteDirections: Set<String> = emptySet(),
     val isNotification: Boolean = false,
     val activeAlarms: List<SubwayAlarmEntity> = emptyList(),
 

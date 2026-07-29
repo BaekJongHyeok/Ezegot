@@ -33,7 +33,6 @@ import com.jonghyeok.ezegot.viewModel.StationViewModel
 /** 역 상세 화면의 알람 / 전화 / 공유 액션 바. 상단 바 아래에 겹쳐 배치된다. */
 @Composable
 internal fun StationActionBar(
-    isFavorite: Boolean,
     isNotification: Boolean,
     viewModel: StationViewModel,
     stationInfo: BasicStationInfo?,

@@ -57,7 +57,7 @@ fun StationScreen(
 
     val stationInfo = uiState.stationInfo
     val arrivalInfo = uiState.arrivals
-    val isFavorite = uiState.isFavorite
+    val favoriteDirections = uiState.favoriteDirections
     val stationLocation = uiState.stationLocation
 
     var showPermissionRationale by remember { mutableStateOf(false) }
@@ -125,9 +125,7 @@ fun StationScreen(
             stationName = stationName,
             lineNumber = lineNumber,
             arrivalInfo = arrivalInfo,
-            isFavorite = isFavorite,
             onBack = onBack,
-            onToggleFavorite = { viewModel.toggleFavorite() },
             onStationClick = onStationClick
         )
 
@@ -167,6 +165,8 @@ fun StationScreen(
                         dnDt = dnDtLabel,
                         timeTable = timeTable,
                         activeAlarms = uiState.activeAlarms,
+                        favoriteDirections = favoriteDirections,
+                        onToggleFavoriteDirection = { viewModel.toggleFavoriteDirection(it) },
                         onSetAlarm = { arr, threshold ->
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 when {
@@ -206,7 +206,6 @@ fun StationScreen(
 
             // 액션 버튼바를 위에 띄워서 오버랩 시킴 (공백 제거 효과)
             StationActionBar(
-                isFavorite = isFavorite,
                 isNotification = uiState.isNotification,
                 viewModel = viewModel,
                 stationInfo = stationInfo?.let { BasicStationInfo(it.stationName, it.lineNumber) },

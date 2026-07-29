@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,6 +64,8 @@ internal fun ArrivalCard(
     destination: String,
     fullSchedules: List<TimeTableSchedule> = emptyList(),
     activeAlarms: List<SubwayAlarmEntity>,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onSetAlarm: (RealtimeArrival, Int) -> Unit,
     onCancelAlarm: (String) -> Unit
 ) {
@@ -118,17 +122,33 @@ internal fun ArrivalCard(
         Column(modifier = Modifier.padding(top = 16.dp)) {
             // 도착 정보 및 버튼 외 다른 콘텐츠는 16dp 패딩 적용
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                // 방면 제목 (중복 "방면" 제거 및 말줄임표 적용)
+                // 방면 제목 + 이 방향의 즐겨찾기 토글
                 val displayDestination = destination.replace("방면", "").trim()
-                Text(
-                    text = "$displayDestination 방면",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "$displayDestination 방면",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    // 즐겨찾기가 방향 단위라 별도 방면마다 하나씩 둔다
+                    IconButton(onClick = onToggleFavorite) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = if (isFavorite) "즐겨찾기 해제" else "즐겨찾기 추가",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
 
                 // 도착 리스트 (무조건 2개만 노출되도록 강제)
                 val displayArrivals = arrivals.take(2)

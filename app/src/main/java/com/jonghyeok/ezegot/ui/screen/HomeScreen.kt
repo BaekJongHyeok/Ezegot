@@ -44,7 +44,8 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.jonghyeok.ezegot.SubwayLine
-import com.jonghyeok.ezegot.dto.BasicStationInfo
+import com.jonghyeok.ezegot.dto.FavoriteStation
+import com.jonghyeok.ezegot.dto.matchesDirection
 import com.jonghyeok.ezegot.dto.NearbyStation
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
@@ -267,20 +268,19 @@ fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Un
         if (favorites.isEmpty()) {
             item { EmptyFavoriteView() }
         } else {
-            items(favorites) { station ->
-                val isLoading = loadingStates[station.stationName] ?: true
-                val lineId = SubwayLine.getLineId(station.lineNumber)
-                val arrivals = arrivalMap[station.stationName] ?: emptyList()
-                val up = arrivals.filter { it.subwayId == lineId && it.updnLine == "상행" }
-                    .distinctBy { it.bstatnNm }.take(2)
-                val dn = arrivals.filter { it.subwayId == lineId && it.updnLine != "상행" }
-                    .distinctBy { it.bstatnNm }.take(2)
+            items(favorites) { favorite ->
+                val isLoading = loadingStates[favorite.stationName] ?: true
+                val lineId = SubwayLine.getLineId(favorite.lineNumber)
+                // 즐겨찾기가 방향 단위이므로 담아둔 방향만 남긴다
+                val arrivals = (arrivalMap[favorite.stationName] ?: emptyList())
+                    .filter { it.subwayId == lineId && it.updnLine.matchesDirection(favorite.direction) }
+                    .distinctBy { it.bstatnNm }
+                    .take(3)
                 FavoriteArrivalRow(
-                    station = station,
-                    upArrivals = up,
-                    dnArrivals = dn,
+                    favorite = favorite,
+                    arrivals = arrivals,
                     isLoading = isLoading,
-                    onClick = { onStationClick(station.stationName, station.lineNumber) }
+                    onClick = { onStationClick(favorite.stationName, favorite.lineNumber) }
                 )
             }
         }
@@ -293,12 +293,11 @@ fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Un
     }
 }
 
-// ── 리스트형 즐겨찾기 카드 (가로스크롤 → 세로 리스트로 전환) ────
+// ── 즐겨찾기 카드 (방향 하나가 카드 하나) ────────────────────────
 @Composable
 fun FavoriteArrivalRow(
-    station: BasicStationInfo,
-    upArrivals: List<RealtimeArrival>,
-    dnArrivals: List<RealtimeArrival>,
+    favorite: FavoriteStation,
+    arrivals: List<RealtimeArrival>,
     isLoading: Boolean,
     onClick: () -> Unit
 ) {
@@ -325,21 +324,27 @@ fun FavoriteArrivalRow(
                 ) {
                     // 도착 시간보다 무게를 낮춘다. 사용자가 등록한 역이라 재확인 가치가 낮다
                     Text(
-                        text = station.stationName,
+                        text = favorite.stationName,
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    val lineColor = getSubwayLineColor(station.lineNumber)
+                    val lineColor = getSubwayLineColor(favorite.lineNumber)
                     Surface(shape = RoundedCornerShape(6.dp), color = lineColor) {
                         Text(
-                            text = station.lineNumber.removePrefix("0"),
+                            text = favorite.lineNumber.removePrefix("0"),
                             style = MaterialTheme.typography.labelSmall,
                             color = onSubwayLineColor(lineColor),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
+                    // 어느 방향을 담은 것인지 카드에서 바로 보이게 한다
+                    Text(
+                        text = favorite.direction,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -347,7 +352,7 @@ fun FavoriteArrivalRow(
             Spacer(Modifier.height(12.dp))
 
             // 도착 1건 = 1행. 건수만큼만 그리므로 카드 높이가 내용에 따라 줄어든다.
-            val lines = upArrivals.take(2) + dnArrivals.take(2)
+            val lines = arrivals
 
             when {
                 isLoading -> {

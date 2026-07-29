@@ -3,7 +3,7 @@ package com.jonghyeok.ezegot.repository
 import android.content.Context
 import com.jonghyeok.ezegot.db.FavoriteStationDao
 import com.jonghyeok.ezegot.db.FavoriteStationEntity
-import com.jonghyeok.ezegot.dto.BasicStationInfo
+import com.jonghyeok.ezegot.dto.FavoriteStation
 import com.jonghyeok.ezegot.widget.ArrivalWidget
 import com.jonghyeok.ezegot.widget.ArrivalWidgetReceiver
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,23 +17,33 @@ class FavoriteRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val favoriteDao: FavoriteStationDao
 ) {
-    /** 즐겨찾기 목록 (Room Flow – DB 변경 시 자동 emit) */
-    val favorites: Flow<List<BasicStationInfo>> = favoriteDao.getAll().map { list ->
-        list.map { BasicStationInfo(it.stationName, it.lineNumber) }
+    /** 즐겨찾기 목록 (Room Flow – DB 변경 시 자동 emit). 방향이 저장 단위다. */
+    val favorites: Flow<List<FavoriteStation>> = favoriteDao.getAll().map { list ->
+        list.map { FavoriteStation(it.stationName, it.lineNumber, it.direction) }
     }
 
-    suspend fun addFavorite(station: BasicStationInfo) {
-        favoriteDao.insert(FavoriteStationEntity(stationName = station.stationName, lineNumber = station.lineNumber))
+    /** 이 역·노선에서 담아둔 방향들 */
+    fun directionsOf(stationName: String, lineNumber: String): Flow<List<String>> =
+        favoriteDao.directionsOf(stationName, lineNumber)
+
+    suspend fun addFavorite(favorite: FavoriteStation) {
+        favoriteDao.insert(
+            FavoriteStationEntity(
+                stationName = favorite.stationName,
+                lineNumber = favorite.lineNumber,
+                direction = favorite.direction
+            )
+        )
         notifyWidget()
     }
 
-    suspend fun removeFavorite(station: BasicStationInfo) {
-        favoriteDao.delete(station.stationName, station.lineNumber)
+    suspend fun removeFavorite(favorite: FavoriteStation) {
+        favoriteDao.delete(favorite.stationName, favorite.lineNumber, favorite.direction)
         notifyWidget()
     }
 
-    suspend fun isFavorite(station: BasicStationInfo): Boolean =
-        favoriteDao.exists(station.stationName, station.lineNumber)
+    suspend fun isFavorite(favorite: FavoriteStation): Boolean =
+        favoriteDao.exists(favorite.stationName, favorite.lineNumber, favorite.direction)
 
     /**
      * 즐겨찾기 변경을 위젯에 2단계로 반영한다.

@@ -26,6 +26,7 @@ import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.api.TimeTableResponse
 import com.jonghyeok.ezegot.db.SubwayAlarmEntity
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import com.jonghyeok.ezegot.dto.directionPairFor
 
 /**
  * 열차 도착 정보 섹션.
@@ -41,9 +42,13 @@ internal fun ArrivalInfoSection(
     dnDt: String,
     timeTable: Pair<TimeTableResponse?, TimeTableResponse?>?,
     activeAlarms: List<SubwayAlarmEntity>,
+    favoriteDirections: Set<String>,
+    onToggleFavoriteDirection: (String) -> Unit,
     onSetAlarm: (RealtimeArrival, Int) -> Unit,
     onCancelAlarm: (String) -> Unit
 ) {
+    // 이 노선이 쓰는 방향 표기 (2호선은 내선/외선)
+    val (upDirection, dnDirection) = directionPairFor(line)
     var isRealtime by remember { mutableStateOf(true) }
 
     val lineId = SubwayLine.getLineId(line)
@@ -123,8 +128,28 @@ internal fun ArrivalInfoSection(
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ArrivalCard(Modifier.weight(1f), upList, upDt, upFullSchedules, activeAlarms, onSetAlarm, onCancelAlarm)
-            ArrivalCard(Modifier.weight(1f), dnList, dnDt, dnFullSchedules, activeAlarms, onSetAlarm, onCancelAlarm)
+            ArrivalCard(
+                modifier = Modifier.weight(1f),
+                arrivals = upList,
+                destination = upDt,
+                fullSchedules = upFullSchedules,
+                activeAlarms = activeAlarms,
+                isFavorite = upDirection in favoriteDirections,
+                onToggleFavorite = { onToggleFavoriteDirection(upDirection) },
+                onSetAlarm = onSetAlarm,
+                onCancelAlarm = onCancelAlarm
+            )
+            ArrivalCard(
+                modifier = Modifier.weight(1f),
+                arrivals = dnList,
+                destination = dnDt,
+                fullSchedules = dnFullSchedules,
+                activeAlarms = activeAlarms,
+                isFavorite = dnDirection in favoriteDirections,
+                onToggleFavorite = { onToggleFavoriteDirection(dnDirection) },
+                onSetAlarm = onSetAlarm,
+                onCancelAlarm = onCancelAlarm
+            )
         }
     }
 }

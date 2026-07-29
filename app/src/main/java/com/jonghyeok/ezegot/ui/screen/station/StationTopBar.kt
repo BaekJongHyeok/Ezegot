@@ -49,9 +49,7 @@ internal fun StationTopBar(
     stationName: String,
     lineNumber: String,
     arrivalInfo: List<RealtimeArrival>,
-    isFavorite: Boolean,
     onBack: () -> Unit,
-    onToggleFavorite: () -> Unit,
     onStationClick: (String, String) -> Unit
 ) {
     Box(
@@ -70,13 +68,7 @@ internal fun StationTopBar(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = onToggleFavorite) {
-                    Icon(
-                        if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                        contentDescription = "즐겨찾기",
-                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                // 즐겨찾기는 방향 단위라 상단 바가 아니라 각 방면 카드에 별을 둔다
             }
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Row(

@@ -6,6 +6,7 @@ import com.jonghyeok.ezegot.alarm.SubwayAlarmManager
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.db.SubwayAlarmDao
 import com.jonghyeok.ezegot.dto.BasicStationInfo
+import com.jonghyeok.ezegot.dto.FavoriteStation
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.repository.FavoriteRepository
 import com.jonghyeok.ezegot.repository.LocationRepository
@@ -77,8 +78,10 @@ class StationViewModel @Inject constructor(
         val info = BasicStationInfo(stationName, line)
         _uiState.update { it.copy(stationInfo = info) }
         viewModelScope.launch {
-            val favorite = favoriteRepository.isFavorite(info)
-            _uiState.update { it.copy(isFavorite = favorite) }
+            // 즐겨찾기는 방향 단위라, 이 역에서 담아둔 방향 집합을 구독한다
+            favoriteRepository.directionsOf(stationName, line).collect { directions ->
+                _uiState.update { it.copy(favoriteDirections = directions.toSet()) }
+            }
         }
     }
 
@@ -90,16 +93,20 @@ class StationViewModel @Inject constructor(
         }
     }
 
-    fun toggleFavorite() {
+    /**
+     * 한 방향의 즐겨찾기를 토글한다.
+     *
+     * 상태는 Room Flow가 다시 흘려주므로 여기서 직접 갱신하지 않는다.
+     */
+    fun toggleFavoriteDirection(direction: String) {
         val station = _uiState.value.stationInfo ?: return
+        val favorite = FavoriteStation(station.stationName, station.lineNumber, direction)
         viewModelScope.launch {
-            val wasFavorite = _uiState.value.isFavorite
-            if (wasFavorite) {
-                favoriteRepository.removeFavorite(station)
+            if (direction in _uiState.value.favoriteDirections) {
+                favoriteRepository.removeFavorite(favorite)
             } else {
-                favoriteRepository.addFavorite(station)
+                favoriteRepository.addFavorite(favorite)
             }
-            _uiState.update { it.copy(isFavorite = !wasFavorite) }
         }
     }
 

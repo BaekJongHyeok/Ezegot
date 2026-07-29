@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.jonghyeok.ezegot.MainDispatcherRule
 import com.jonghyeok.ezegot.alarm.SubwayAlarmManager
 import com.jonghyeok.ezegot.db.SubwayAlarmDao
+import com.jonghyeok.ezegot.dto.FavoriteStation
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.repository.FavoriteRepository
 import com.jonghyeok.ezegot.repository.LocationRepository
@@ -100,21 +101,35 @@ class StationViewModelTest {
     }
 
     @Test
-    fun `즐겨찾기를 토글하면 상태가 반전되고 저장이 호출된다`() = runTest {
-        // given: 아직 즐겨찾기가 아닌 역
-        coEvery { favoriteRepository.isFavorite(any()) } returns false
+    fun `담지 않은 방향을 토글하면 그 방향이 저장된다`() = runTest {
+        // given: 아직 아무 방향도 담지 않은 역
+        every { favoriteRepository.directionsOf(any(), any()) } returns flowOf(emptyList())
+        val viewModel = createViewModel()
+        viewModel.loadStationInfo("강남", "2호선")
+
+        // when: 2호선은 상하행 대신 내선/외선을 쓴다
+        viewModel.toggleFavoriteDirection("내선")
+
+        // then
+        coVerify(exactly = 1) {
+            favoriteRepository.addFavorite(FavoriteStation("강남", "2호선", "내선"))
+        }
+    }
+
+    @Test
+    fun `이미 담은 방향을 토글하면 그 방향만 삭제된다`() = runTest {
+        // given: 내선만 담아둔 상태
+        every { favoriteRepository.directionsOf(any(), any()) } returns flowOf(listOf("내선"))
         val viewModel = createViewModel()
         viewModel.loadStationInfo("강남", "2호선")
 
         // when
-        viewModel.toggleFavorite()
+        viewModel.toggleFavoriteDirection("내선")
 
-        // then
-        viewModel.uiState.test {
-            val state = awaitItem()
-            assertTrue("토글 후 즐겨찾기 상태여야 한다", state.isFavorite)
-            assertNull("즐겨찾기 토글은 에러를 만들지 않는다", state.errorMessage)
+        // then: 외선은 건드리지 않는다
+        coVerify(exactly = 1) {
+            favoriteRepository.removeFavorite(FavoriteStation("강남", "2호선", "내선"))
         }
-        coVerify(exactly = 1) { favoriteRepository.addFavorite(any()) }
+        coVerify(exactly = 0) { favoriteRepository.addFavorite(any()) }
     }
 }
