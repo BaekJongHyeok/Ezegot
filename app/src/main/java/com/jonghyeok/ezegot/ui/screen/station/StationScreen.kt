@@ -240,6 +240,7 @@ fun StationScreen(
             )
 
             StationFirstLastSection(
+                lineNumber = lineNumber,
                 upLabel = upLabel,
                 dnLabel = dnLabel,
                 up = uiState.timetable?.first,

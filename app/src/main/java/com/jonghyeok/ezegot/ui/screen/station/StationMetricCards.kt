@@ -37,6 +37,7 @@ import com.jonghyeok.ezegot.api.TimeTableResponse
  */
 @Composable
 internal fun StationFirstLastSection(
+    lineNumber: String,
     upLabel: String,
     dnLabel: String,
     up: TimeTableResponse?,
@@ -49,8 +50,18 @@ internal fun StationFirstLastSection(
 
     when {
         errorMessage != null -> NoticeCard(errorMessage, "네트워크 상태를 확인한 뒤 다시 들어와 주세요")
+
+        // 응답은 왔는데 상·하행 모두 비어 있다 = API가 INFO-200을 준 경우.
+        // 카드 4개를 "—"로 세워두면 빈 면적만 크게 차지하므로 한 줄로 접는다.
+        // "전체 시간표"도 볼 것이 없으므로 함께 감춘다.
         up != null && down != null && upEmpty && downEmpty ->
-            NoticeCard("시간표 미제공 노선", "코레일 등은 서울 공공데이터에서 시간표를 주지 않습니다")
+            Text(
+                text = "${lineNumber.removePrefix("0")}은 시간표가 제공되지 않습니다",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp)
+            )
+
         else -> {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 DirectionMetricGroup(label = upLabel, response = up)

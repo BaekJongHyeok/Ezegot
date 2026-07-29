@@ -106,6 +106,7 @@ class StationRepository @Inject constructor(
                 geocoder.getFromLocation(lat, lon, 1)
                     ?.firstOrNull()
                     ?.getAddressLine(0)
+                    ?.trimAddressPrefix()
                     ?: "주소를 찾을 수 없습니다."
             }.getOrDefault("주소를 가져올 수 없음")
         }
@@ -232,3 +233,17 @@ class StationRepository @Inject constructor(
         const val TAG = "StationRepository"
     }
 }
+
+/**
+ * Geocoder 주소에서 불필요한 앞부분을 뗀다.
+ *
+ * 한국 로케일에서도 "대한민국 서울특별시 …"처럼 국가명이 붙어 온다.
+ * 국내 전용 앱이라 국가명은 정보가 없고 한 줄 폭만 잡아먹는다.
+ * 우편번호가 앞에 붙는 경우도 있어 함께 뗀다.
+ */
+private fun String.trimAddressPrefix(): String =
+    trim()
+        .removePrefix("대한민국")
+        .trim()
+        .replace(Regex("^\\d{5,6}\\s+"), "")
+        .trim()
