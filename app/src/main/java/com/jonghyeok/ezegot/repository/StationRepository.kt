@@ -144,9 +144,11 @@ class StationRepository @Inject constructor(
                 val tagoListRes = runCatching { extendedApi.getTagoStationList(apiKeys.tago, cleanName) }.getOrNull()
                 var nodeId: String? = null
 
-                tagoListRes?.body()?.let { json ->
+                // try/catch를 let의 꼬리 표현식으로 두면 반환형 추론이 걸리므로 문(statement)으로 쓴다
+                val listBody = tagoListRes?.body()
+                if (listBody != null) {
                     try {
-                        val items = json.asJsonObject.getAsJsonObject("response").getAsJsonObject("body").getAsJsonObject("items")
+                        val items = listBody.asJsonObject.getAsJsonObject("response").getAsJsonObject("body").getAsJsonObject("items")
                         if (items.has("item")) {
                             val itemElement = items.get("item")
                             val itemList = if (itemElement.isJsonArray) itemElement.asJsonArray else com.google.gson.JsonArray().apply { add(itemElement) }
@@ -175,8 +177,8 @@ class StationRepository @Inject constructor(
                         java.util.Calendar.SUNDAY   -> "03"
                         else                         -> "01"
                     }
-                    val tagoUp   = fetchTagoTimeTable(nodeId!!, tagoDayCode, "U", apiKeys.tago, extendedApi)
-                    val tagoDown = fetchTagoTimeTable(nodeId!!, tagoDayCode, "D", apiKeys.tago, extendedApi)
+                    val tagoUp   = fetchTagoTimeTable(nodeId, tagoDayCode, "U", apiKeys.tago, extendedApi)
+                    val tagoDown = fetchTagoTimeTable(nodeId, tagoDayCode, "D", apiKeys.tago, extendedApi)
                     return@withContext Pair(tagoUp, tagoDown)
                 }
             }
