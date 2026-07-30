@@ -384,3 +384,55 @@ M3에 비활성 텍스트 슬롯이 없어 `secondary`·`tertiary`를 텍스트 
 한 줄 12편을 넘기면 `FlowRow`로 접는다.
 
 관련 파일: `ui/screen/station/StationTimetableSheet.kt`
+
+---
+
+## 4. 알고 있으나 다루지 않은 것
+
+이번 작업 범위 밖이라 남겨 둔 것들이다. 발견 경위와 현재 코드 상태만 적는다.
+
+### 4-1. 일일 API 한도 소진이 화면에 드러나지 않는다
+
+실시간 도착 API는 일일 1,000건 제한이 있다. `StationRepository`는 연속 3회
+실패하면 `isApiLocked`를 세워 이후 호출을 건너뛴다.
+
+```kotlin
+private var isApiLocked = false
+private var retryCount = 0
+private val MAX_RETRIES = 3
+```
+
+이 값이 `private`이고 Repository 밖으로 나가지 않는다. 잠긴 뒤에는 캐시된 값이
+있으면 그것을, 없으면 빈 리스트를 반환한다. 화면은 "도착 정보 없음"만 보여주므로
+한도를 다 썼는지, 네트워크가 끊겼는지, 정말 열차가 없는지 구분할 수 없다.
+
+관련 파일: `repository/StationRepository.kt`
+
+### 4-2. 마지막 조회 결과를 캐시하지 않는다
+
+실시간 도착은 역 이름별 10초 인메모리 캐시(`arrivalCache`)만 있다. 프로세스가
+죽으면 사라지고 영속 저장이 없다. Room에는 즐겨찾기·최근검색·알람만 있다.
+비행기 모드에서 앱을 열면 즐겨찾기 목록은 나오지만 도착 시간은 전부 비어 있다.
+
+### 4-3. 홈에 네트워크 실패 표시가 없다
+
+오류를 화면 상태로 올리는 곳은 `StationUiState.errorMessage` 하나이고, 채워지는
+경우도 역 상세의 첫차·막차 조회가 상·하행 모두 실패했을 때뿐이다.
+`MainViewModel`에는 오류 상태가 없다. 홈에서 조회가 실패하면 조용히 빈 값이 된다.
+
+Repository의 반환 규약이 "실패 시 빈 값"이라 실패와 빈 결과가 호출부에서
+구분되지 않는 것이 근본 원인이다. 규약을 바꾸면 영향 범위가 넓어 이번에는 두었다.
+
+### 4-4. Compose UI 테스트가 없다
+
+단위 테스트 34건은 전부 JVM에서 도는 것이고 `app/src/androidTest` 소스셋 자체가
+없다. 화면 상태 전이(빈 상태, 방향 전환 탭, 즐겨찾기 토글의 UI 반영)는
+검증되지 않았다.
+
+### 4-5. 위젯이 크기와 무관하게 3개 고정이다
+
+`ArrivalWidget.MAX_FAVORITES = 3`이고 Glance `SizeMode.Responsive`를 쓰지 않는다.
+`arrival_widget_info.xml`이 `resizeMode="horizontal|vertical"`이라 사용자가 크기를
+줄일 수 있는데, 2×2로 줄여도 3개를 그리려 해서 잘린다.
+
+관련 파일: `widget/ArrivalWidget.kt`, `res/xml/arrival_widget_info.xml`
