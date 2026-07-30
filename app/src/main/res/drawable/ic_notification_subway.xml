@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    알림 스몰 아이콘. 런처 아이콘과 같은 글리프를 쓴다.
+    Material Symbols Rounded "directions_subway" (Filled, weight 400, optical size 48).
+    Google, Apache License 2.0.
+
+    스몰 아이콘은 시스템이 알파 채널만 읽어 상태 표시줄 색으로 칠하므로
+    색은 흰색 하나로 두고 배경을 넣지 않는다. 배경을 그리면 통째로 흰 사각형이 된다.
+
+    원본 좌표계는 960 그리드에 viewBox "0 -960 960 960"이라 y가 음수다.
+    시스템 아이콘 관례대로 24dp 캔버스에 2dp 여백을 남겨 20dp로 얹는다.
+      s  = 20 / 760          글리프 실제 높이 760단위를 20dp로
+      tx = 12 - 480 * s      글리프 bbox 중심 x(480)를 캔버스 중심 12로
+      ty = 12 + 500 * s      글리프 bbox 중심 y(-500)를 캔버스 중심 12로
+    결과: 세로 2~22dp, 가로 3.6~20.4dp.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:scaleX="0.02631579"
+        android:scaleY="0.02631579"
+        android:translateX="-0.63157895"
+        android:translateY="25.15789474">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M300-200q-59 0-99.5-40.5T160-340v-380q0-83 77-121.5T480-880q172 0 246 37t74 123v380q0 59-40.5 99.5T660-200l79 53q9 6 5.5 16.5T730-120H230q-11 0-14.5-10.5T221-147l79-53Zm-80-345h234v-155H220v155Zm294 0h226v-155H514v155ZM335.06-315Q358-315 374-331.06q16-16.06 16-39T373.94-409q-16.06-16-39-16T296-408.94q-16 16.06-16 39T296.06-331q16.06 16 39 16Zm290 0Q648-315 664-331.06q16-16.06 16-39T663.94-409q-16.06-16-39-16T586-408.94q-16 16.06-16 39T586.06-331q16.06 16 39 16Z" />
+    </group>
+</vector>
