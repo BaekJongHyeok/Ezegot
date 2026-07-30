@@ -85,8 +85,13 @@ data class RealtimeArrival(
             }
         }
 
-        // 2. barvlDt 정보가 없을 경우 기존 arvlMsg2(arrivalMessage1) 기반 문자열 정제 및 시간 추정
-        val rawMessage = arrivalMessage1.substringBefore("(").trim()
+        // 2. barvlDt가 없으면 arvlMsg2를 정제해 쓴다.
+        //
+        // 꼬리에 붙는 "(다음 역)"만 뗀다. substringBefore("(")를 쓰면
+        // "총신대입구(이수) 도착"처럼 역명에 괄호가 있는 역에서 역명이 잘려
+        // "총신대입구"만 남고, 어느 패턴에도 걸리지 않아 역명이 그대로 화면에 나왔다.
+        // greedy .* 라서 "6분 후 (상도(중앙대앞))" 같은 중첩 괄호도 통째로 걷힌다.
+        val rawMessage = arrivalMessage1.replace(TRAILING_PARENTHESES, "").trim()
         
         // "[N]번째 전역" 패턴(예: "[3]번째 전역") 처리 -> 정밀 시간 계산(ArrivalEstimator)
         val stationRegex = Regex("\\[(\\d+)]번째 전역")
@@ -127,5 +132,10 @@ data class RealtimeArrival(
 
         // 일반 텍스트의 경우 불필요한 단어 제거 혹은 그대로 반환
         return rawMessage.ifEmpty { "정보 없음" }
+    }
+
+    private companion object {
+        /** 문자열 끝에 붙는 "(다음 역)". 중첩 괄호까지 한 번에 걷도록 greedy를 쓴다 */
+        val TRAILING_PARENTHESES = Regex("""\s*\(.*\)\s*$""")
     }
 }
