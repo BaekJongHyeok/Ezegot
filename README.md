@@ -209,6 +209,16 @@ MAPS_API_KEY=발급받은_키
 `FusedLocationProviderClient`와 주소 변환에 쓰는 `android.location.Geocoder`는
 Android 프레임워크 / Play 서비스 API라 이 키를 사용하지 않는다.
 
+## 사용한 외부 리소스
+
+| 리소스 | 라이선스 | 쓰이는 곳 |
+|---|---|---|
+| [Pretendard](https://github.com/orioncactus/pretendard) Std Variable | SIL Open Font License 1.1 | 앱 전체 본문 서체 |
+| [Material Symbols](https://fonts.google.com/icons) `directions_subway` (Rounded, Filled) | Apache License 2.0 | 런처 아이콘 |
+
+라이선스 원문은 `app/src/main/assets/`에 함께 넣어 두었다
+(`pretendard_OFL.txt`, `material_symbols_APACHE-2.0.txt`).
+
 ## 앞으로 개선할 것
 
 <!-- TODO: 직접 작성 -->

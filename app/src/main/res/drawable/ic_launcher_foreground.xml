@@ -2,49 +2,32 @@
 <!--
     런처 아이콘 전경.
 
-    세로 바 = 노선, 붉은 점 = 도착 임박 열차, 흐린 점 = 뒤따르는 열차.
-    앱 목록의 좌측 호선색 세로 바, 도착 임박 빨강과 같은 언어다.
+    Material Symbols Rounded "directions_subway" (Filled, weight 400, optical size 48).
+    Google, Apache License 2.0. path 데이터는 원본 그대로이며 다시 그리지 않았다.
 
-    세로 바는 폭 9에 모서리 반경 4.5라 양 끝이 완전한 반원이 된다(stadium).
-    벡터 드로어블에는 원 프리미티브가 없어 점은 호 두 개로 그린다.
+    원본 좌표계는 960 그리드에 viewBox "0 -960 960 960"이라 y가 음수다.
+    group의 scale·translate로 108dp 캔버스 중앙에 얹는다.
+      s  = 56 / 760          글리프 실제 높이 760단위를 56dp로
+      tx = 54 - 480 * s      글리프 bbox 중심 x(480)를 캔버스 중심 54로
+      ty = 54 + 500 * s      글리프 bbox 중심 y(-500)를 캔버스 중심 54로
+    결과: 세로 26~82dp, 가로 30.4~77.6dp.
+
+    후보 넷(subway, directions_subway, train, tram)을 48px로 렌더해 비교했다.
+    subway는 아치 안의 열차가 뭉개지고 tram은 상단 폴이 사라진다.
+    directions_subway는 창 두 칸과 점 두 개가 48px에서도 분리되어 보인다.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- 노선: x=36, y=26, w=9, h=56, r=4.5 -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M40.5,26
-                          A4.5,4.5 0 0 1 45,30.5
-                          L45,77.5
-                          A4.5,4.5 0 0 1 40.5,82
-                          A4.5,4.5 0 0 1 36,77.5
-                          L36,30.5
-                          A4.5,4.5 0 0 1 40.5,26 Z" />
-
-    <!-- 도착 임박 열차: 중심 (66,38), 반지름 9 -->
-    <path
-        android:fillColor="#FF5A52"
-        android:pathData="M57,38
-                          a9,9 0 1 0 18,0
-                          a9,9 0 1 0 -18,0 Z" />
-
-    <!-- 뒤따르는 열차: 중심 (66,62), 반지름 5.5 -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.45"
-        android:pathData="M60.5,62
-                          a5.5,5.5 0 1 0 11,0
-                          a5.5,5.5 0 1 0 -11,0 Z" />
-
-    <!-- 뒤따르는 열차: 중심 (66,79), 반지름 5.5 -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.45"
-        android:pathData="M60.5,79
-                          a5.5,5.5 0 1 0 11,0
-                          a5.5,5.5 0 1 0 -11,0 Z" />
+    <group
+        android:scaleX="0.07368421"
+        android:scaleY="0.07368421"
+        android:translateX="18.631579"
+        android:translateY="90.842105">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M300-200q-59 0-99.5-40.5T160-340v-380q0-83 77-121.5T480-880q172 0 246 37t74 123v380q0 59-40.5 99.5T660-200l79 53q9 6 5.5 16.5T730-120H230q-11 0-14.5-10.5T221-147l79-53Zm-80-345h234v-155H220v155Zm294 0h226v-155H514v155ZM335.06-315Q358-315 374-331.06q16-16.06 16-39T373.94-409q-16.06-16-39-16T296-408.94q-16 16.06-16 39T296.06-331q16.06 16 39 16Zm290 0Q648-315 664-331.06q16-16.06 16-39T663.94-409q-16.06-16-39-16T586-408.94q-16 16.06-16 39T586.06-331q16.06 16 39 16Z" />
+    </group>
 </vector>
