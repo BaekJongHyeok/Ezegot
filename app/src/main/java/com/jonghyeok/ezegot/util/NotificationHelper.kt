@@ -62,7 +62,7 @@ class NotificationHelper @Inject constructor(@ApplicationContext private val con
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // 나중에 앱 아이콘으로 교체 필요
+            .setSmallIcon(R.drawable.ic_notification_subway)
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

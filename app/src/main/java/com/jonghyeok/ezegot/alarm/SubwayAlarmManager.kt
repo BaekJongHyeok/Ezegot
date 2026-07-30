@@ -53,9 +53,18 @@ class SubwayAlarmManager @Inject constructor(
             "threshold" to thresholdSeconds
         )
 
+        // 워커는 실시간 도착 API를 반복 조회해야 한다. 네트워크 제약이 없으면
+        // 오프라인 상태로 시작해 빈 응답만 받고, 목록이 비어 있으면 종료 조건
+        // (arrivals.isNotEmpty())에도 걸리지 않아 30초마다 1시간을 헛돈 뒤
+        // 알림 없이 끝났다. 위젯 워커에는 이미 걸려 있던 제약이다.
         val workRequest = OneTimeWorkRequestBuilder<SubwayAlarmWorker>()
             .setInputData(inputData)
             .setInitialDelay(initialDelay.toLong(), TimeUnit.SECONDS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
             .addTag("subway_alarm_${alarmId}")
             .addTag("train_${trainNo}")
             .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)

@@ -97,7 +97,7 @@ class SubwayAlarmWorker @AssistedInject constructor(
         notificationHelper.showArrivalNotification(
             id = id,
             title = "지하철 도착 알림",
-            message = "[$stationName] $direction 열차가 $status 입니다.",
+            message = "[$stationName] $direction 열차가 ${status}입니다.",
             stationName = stationName
         )
     }
