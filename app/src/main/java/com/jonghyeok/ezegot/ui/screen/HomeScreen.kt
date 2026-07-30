@@ -109,7 +109,9 @@ fun HomeScreen(
                 onStationClick = onStationClick
             )
 
-            Spacer(Modifier.height(16.dp))
+            // 마지막 카드가 하단바에 잘리지 않도록. Scaffold가 이미 바 높이만큼
+            // 인셋을 주지만, 카드 테두리가 바로 맞닿아 잘려 보였다.
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -212,13 +214,10 @@ private fun NearbyStationRow(
         // 도착 정보가 없는 역(2·3번째)은 거리만. 실시간 API를 최근접 한 곳에만
         // 부르기 때문이지, 그 역에 열차가 없다는 뜻이 아니다.
         DetailRow(
-            label = if (arrival != null) {
-                "${station.walkingLabel()} · ${arrival.bstatnNm}행"
-            } else {
-                station.walkingLabel()
-            },
+            label = station.walkingLabel(),
             arrival = arrival,
-            emptyPlaceholder = null
+            emptyPlaceholder = null,
+            trailingLabel = arrival?.let { "${it.bstatnNm}행" }
         )
     }
 }
@@ -345,7 +344,8 @@ private fun StationRow(
 private fun DetailRow(
     label: String,
     arrival: RealtimeArrival?,
-    emptyPlaceholder: String? = "정보 없음"
+    emptyPlaceholder: String? = "정보 없음",
+    trailingLabel: String? = null
 ) {
     Row(
         modifier = Modifier
@@ -362,6 +362,18 @@ private fun DetailRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
+        // 시간 바로 앞자리는 "어느 열차인지"로 통일한다.
+        // 즐겨찾기는 "상행 · 청량리행"이 왼쪽에 있지만, 주변 역은 왼쪽이 거리라
+        // 성격이 다른 값이 한 구분자로 이어지지 않도록 행선지를 이쪽으로 옮겼다.
+        if (trailingLabel != null) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = trailingLabel,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
         Spacer(Modifier.width(8.dp))
         if (arrival != null) {
             ArrivalTime(arrival = arrival)
@@ -449,14 +461,18 @@ private fun SectionCard(
                 )
             }
         }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp)),
-            content = content
-        )
+        // 테두리는 클립 바깥에 둔다. 안쪽 Column이 자식을 모서리로 잘라내므로
+        // 첫 행·마지막 행의 호선색 세로 바가 둥근 모서리를 뚫고 나오지 않는다.
+        val shape = RoundedCornerShape(14.dp)
+        Box(modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, shape)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surface),
+                content = content
+            )
+        }
     }
 }
 
