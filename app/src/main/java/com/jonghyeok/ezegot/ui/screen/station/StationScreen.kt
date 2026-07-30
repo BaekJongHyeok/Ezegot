@@ -120,13 +120,19 @@ fun StationScreen(
     }
 
     // ── 알람 예약 다이얼로그 ─────────────────────────────────────
+    //
+    // 선택지 세 개를 confirmButton에 넣으면 안 된다. AlertDialog는 confirmButton과
+    // dismissButton을 한 줄에 배치하는데, fillMaxWidth 버튼이 그 줄을 다 차지해
+    // "취소"가 "3분 전" 버튼 위에 겹쳐 찍혔다. 선택지는 본문 슬롯으로 내리고
+    // 액션 줄에는 취소 하나만 남긴다.
     alarmTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { alarmTarget = null },
             title = { Text("도착 알림 설정", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
-            text = { Text("열차 도착 몇 분 전에 알림을 받을까요?", style = MaterialTheme.typography.bodyMedium) },
-            confirmButton = {
+            text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("열차 도착 몇 분 전에 알림을 받을까요?", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(4.dp))
                     listOf(1, 3, 5).forEach { min ->
                         Button(
                             onClick = {
@@ -139,7 +145,7 @@ fun StationScreen(
                     }
                 }
             },
-            dismissButton = {
+            confirmButton = {
                 TextButton(onClick = { alarmTarget = null }) {
                     Text("취소", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
