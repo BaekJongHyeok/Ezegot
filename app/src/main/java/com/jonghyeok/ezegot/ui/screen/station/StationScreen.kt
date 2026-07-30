@@ -207,8 +207,16 @@ fun StationScreen(
         if (granted) alarmTarget = target else { alarmTarget = target; showPermissionRationale = true }
     }
 
-    fun isAlarmOn(arrivals: List<RealtimeArrival>) =
-        arrivals.any { a -> uiState.activeAlarms.any { it.trainNo == a.trainNumber } }
+    /**
+     * 이 방향에 걸려 있는 예약.
+     *
+     * 열차 번호만 비교하면 같은 열차가 지나는 다른 역을 열었을 때도 종이 켜져 보였다.
+     * 예약은 역 단위로 저장하므로 역 이름까지 함께 본다.
+     */
+    fun activeAlarmFor(arrivals: List<RealtimeArrival>) =
+        uiState.activeAlarms.firstOrNull { alarm ->
+            alarm.stationName == stationName && arrivals.any { it.trainNumber == alarm.trainNo }
+        }
 
     Column(
         modifier = Modifier
@@ -238,14 +246,14 @@ fun StationScreen(
                 directionLabel = upLabel,
                 lineColor = lineColor,
                 arrivals = upArrivals,
-                isAlarmOn = isAlarmOn(upArrivals),
+                isAlarmOn = activeAlarmFor(upArrivals) != null,
                 onAlarmClick = { requestAlarm(upArrivals) }
             )
             ArrivalDirectionCard(
                 directionLabel = dnLabel,
                 lineColor = lineColor,
                 arrivals = dnArrivals,
-                isAlarmOn = isAlarmOn(dnArrivals),
+                isAlarmOn = activeAlarmFor(dnArrivals) != null,
                 onAlarmClick = { requestAlarm(dnArrivals) }
             )
 
