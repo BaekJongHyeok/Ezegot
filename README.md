@@ -6,9 +6,15 @@
 
 ## 스크린샷
 
-| 홈 | 역 상세 | 전체 시간표 | 위젯 |
-|---|---|---|---|
-| ![홈](docs/screenshots/home.png) | ![역 상세](docs/screenshots/station.png) | ![시간표](docs/screenshots/timetable.png) | ![위젯](docs/screenshots/widget.png) |
+| 홈 | 역 상세 | 전체 시간표 |
+|---|---|---|
+| ![홈](docs/screenshots/home.jpg) | ![역 상세](docs/screenshots/station.jpg) | ![전체 시간표](docs/screenshots/timetable.jpg) |
+| 즐겨찾기 역의 양방향 도착 시간과 근처 역 | 방향별 도착, 첫차·막차, 환승 노선 | 다음 열차 6편과 시간대별 목록 |
+
+| 검색 | 근처 역 |
+|---|---|
+| ![검색](docs/screenshots/search.jpg) | ![근처 역](docs/screenshots/map.jpg) |
+| 역 이름 검색과 최근 검색 기록 | 현재 위치 기준 근처 역 지도 |
 
 ## 만든 이유
 
