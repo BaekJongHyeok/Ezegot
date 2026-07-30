@@ -72,11 +72,15 @@ flowchart TD
     end
 
     A --> VM
-    W --> WK
     VM --> R
-    WK --> R
     R --> API
     R --> DB
+
+    W --> WK
+    WK --> API
+    WK --> DB
+
+    R -."즐겨찾기 변경 시 갱신 요청".-> W
 
     HILT(["Hilt"]) -.주입.-> VM
     HILT -.주입.-> WK
@@ -87,11 +91,18 @@ flowchart TD
 통해서만 데이터를 얻는다. Repository는 `@Singleton`으로 API 서비스와 DAO를 생성자 주입받고,
 네트워크 호출이 실패하면 예외를 던지지 않고 빈 값을 반환한다.
 
-위젯은 Activity를 거치지 않는 별도 진입점이지만 같은 계층을 쓴다.
-`ArrivalWidgetUpdateWorker`가 `@HiltWorker`로 `FavoriteStationDao`와 `SubwayApiService`를
-주입받으므로, 화면과 위젯이 같은 Repository 인스턴스와 같은 Room 인스턴스를 공유한다.
-도착 시간 정렬·필터 규칙(`util/ArrivalOrdering`)과 강조 판정(`util/ArrivalEmphasis`)도
-양쪽이 같은 함수를 쓴다.
+위젯은 Activity를 거치지 않는 별도 진입점이다. `ArrivalWidgetUpdateWorker`가 `@HiltWorker`로
+`FavoriteStationDao`와 `SubwayApiService`를 직접 주입받으므로 Repository는 경유하지 않지만,
+Hilt가 같은 인스턴스를 주는 덕에 화면과 **같은 Room 인스턴스와 같은 Retrofit 서비스**를 쓴다.
+Room은 한때 `AppDatabase` 자체 싱글턴과 Hilt 양쪽에서 만들어져 같은 파일에 인스턴스가 두 개
+생겼는데, Worker를 Hilt로 옮기며 생성 경로를 하나로 정리했다.
+
+의존 방향은 반대편으로도 한 줄 있다. `FavoriteRepository`가 즐겨찾기 변경 시
+`ArrivalWidget.writeSnapshot()`으로 역 이름을 즉시 기록하고 Worker를 깨운다. 화면에서 별을
+누른 결과가 위젯에 바로 반영되어야 하기 때문이다.
+
+도착 시간 정렬·필터 규칙(`util/ArrivalOrdering`)과 강조 판정(`util/ArrivalEmphasis`)은
+양쪽이 같은 함수를 쓴다. 같은 열차가 화면과 위젯에서 다른 순서로 보이지 않게 하려는 것이다.
 
 같은 `SubwayApiService` 인터페이스를 서로 다른 `baseUrl`의 Retrofit 인스턴스에 붙여 쓰고
 `@Named` 한정자로 구분한다. 실시간 도착 API는 일일 1,000건 제한이 있어 역 이름 단위로
