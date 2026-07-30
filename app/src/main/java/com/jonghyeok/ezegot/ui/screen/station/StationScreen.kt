@@ -126,6 +126,17 @@ fun StationScreen(
     // "취소"가 "3분 전" 버튼 위에 겹쳐 찍혔다. 선택지는 본문 슬롯으로 내리고
     // 액션 줄에는 취소 하나만 남긴다.
     alarmTarget?.let { target ->
+        // 남은 시간이 임계값 아래면 예약하자마자 울린다. 워커가 남은 시간 ≤ 임계값에서
+        // 발화하기 때문이다. 실제로 "5분 전"을 고르고 8초 만에 알림이 온 적이 있다.
+        //
+        // 여유는 워커의 bufferSeconds와 같은 60초를 기본으로 두되, barvlDt가 없어
+        // 추정값을 쓰는 열차는 120초를 요구한다. 추정값은 분 단위로 반올림한 뒤라
+        // 초 정밀도가 없고, 모델 오차까지 있어 실측보다 덜 믿을 수 있다.
+        val remainingSeconds = target.secondsUntilArrival()
+        val requiredMargin = if (target.hasMeasuredArrivalTime()) 60 else 120
+        fun isSelectable(minutes: Int) = remainingSeconds >= minutes * 60 + requiredMargin
+        val hasAnyChoice = listOf(1, 3, 5).any { isSelectable(it) }
+
         AlertDialog(
             onDismissRequest = { alarmTarget = null },
             title = { Text("도착 알림 설정", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
@@ -140,7 +151,8 @@ fun StationScreen(
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "도착 몇 분 전에 알림을 받을까요?",
+                        text = if (hasAnyChoice) "도착 몇 분 전에 알림을 받을까요?"
+                               else "이 열차는 곧 도착해 알림을 예약할 수 없습니다. 뒤에 오는 열차를 선택해 주세요.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -151,6 +163,7 @@ fun StationScreen(
                                 viewModel.setAlarm(target, min)
                                 alarmTarget = null
                             },
+                            enabled = isSelectable(min),
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) { Text("${min}분 전") }
