@@ -9,10 +9,14 @@
 
     원본 좌표계는 960 그리드에 viewBox "0 -960 960 960"이라 y가 음수다.
     group의 scale·translate로 108dp 캔버스 중앙에 얹는다.
-      s  = 56 / 760          글리프 실제 높이 760단위를 56dp로
+      s  = 48 / 760          글리프 실제 높이 760단위를 48dp로
       tx = 54 - 480 * s      글리프 bbox 중심 x(480)를 캔버스 중심 54로
       ty = 54 + 500 * s      글리프 bbox 중심 y(-500)를 캔버스 중심 54로
-    결과: 세로 26~82dp, 가로 30.4~77.6dp.
+    결과: 세로 30~78dp, 가로 33.8~74.2dp.
+
+    56dp로 시작했다가 48dp로 줄였다. 화면에서 아이콘이 타일을 꽉 채워 답답했고,
+    Material 제품 아이콘 키라인(세로 직사각 36x48dp)에도 48이 맞다.
+    중심에서 가장 먼 점(좌우 하단 다리 끝)이 29.1dp로 안전 영역 33dp 안에 들어온다.
 
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -21,10 +25,10 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:scaleX="0.07368421"
-        android:scaleY="0.07368421"
-        android:translateX="18.631579"
-        android:translateY="90.842105">
+        android:scaleX="0.06315789"
+        android:scaleY="0.06315789"
+        android:translateX="23.684211"
+        android:translateY="85.578947">
         <path
             android:fillColor="#000000"
             android:pathData="M300-200q-59 0-99.5-40.5T160-340v-380q0-83 77-121.5T480-880q172 0 246 37t74 123v380q0 59-40.5 99.5T660-200l79 53q9 6 5.5 16.5T730-120H230q-11 0-14.5-10.5T221-147l79-53Zm-80-345h234v-155H220v155Zm294 0h226v-155H514v155ZM335.06-315Q358-315 374-331.06q16-16.06 16-39T373.94-409q-16.06-16-39-16T296-408.94q-16 16.06-16 39T296.06-331q16.06 16 39 16Zm290 0Q648-315 664-331.06q16-16.06 16-39T663.94-409q-16.06-16-39-16T586-408.94q-16 16.06-16 39T586.06-331q16.06 16 39 16Z" />
