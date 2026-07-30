@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,8 +47,8 @@ internal fun ArrivalDirectionCard(
     directionLabel: String,
     lineColor: Color,
     arrivals: List<RealtimeArrival>,
-    isAlarmOn: Boolean,
-    onAlarmClick: () -> Unit
+    isAlarmOn: (RealtimeArrival) -> Boolean,
+    onAlarmClick: (RealtimeArrival) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -57,14 +58,15 @@ internal fun ArrivalDirectionCard(
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
     ) {
         // 카드 헤더.
-        // 높이를 38dp로 고정한다. IconButton 기본 크기가 48dp라 그대로 두면
-        // 행이 64dp까지 늘어나 제목 아래에 빈 공간이 생겼다.
+        // 높이를 38dp로 고정한다. 예전에는 여기에 알림 종이 있었는데, 종은
+        // 열차마다 하나씩 행으로 내려갔다. 방향에 하나만 두면 그 방향의 가장
+        // 빠른 열차로 대상이 고정돼, 뒤에 오는 열차에는 알림을 걸 수 없었다.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .height(38.dp)
-                .padding(start = 13.dp, end = 6.dp),
+                .padding(horizontal = 13.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -83,17 +85,6 @@ internal fun ArrivalDirectionCard(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            // 헤더가 38dp라 IconButton 기본 48dp를 그대로 쓸 수 없다.
-            // 터치 영역은 헤더 높이만큼(38dp) 확보한다.
-            IconButton(onClick = onAlarmClick, modifier = Modifier.size(38.dp)) {
-                Icon(
-                    imageVector = if (isAlarmOn) Icons.Default.Notifications else Icons.Default.NotificationsNone,
-                    contentDescription = if (isAlarmOn) "알림 해제" else "알림 예약",
-                    tint = if (isAlarmOn) MaterialTheme.colorScheme.error
-                           else MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
         }
         HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -115,14 +106,24 @@ internal fun ArrivalDirectionCard(
                 if (index > 0) {
                     HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
-                ArrivalTrainRow(arrival = arrival, isFirst = index == 0)
+                ArrivalTrainRow(
+                    arrival = arrival,
+                    isFirst = index == 0,
+                    isAlarmOn = isAlarmOn(arrival),
+                    onAlarmClick = { onAlarmClick(arrival) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ArrivalTrainRow(arrival: RealtimeArrival, isFirst: Boolean) {
+private fun ArrivalTrainRow(
+    arrival: RealtimeArrival,
+    isFirst: Boolean,
+    isAlarmOn: Boolean,
+    onAlarmClick: () -> Unit
+) {
     val emphasis = arrival.emphasis()
     val color = when (emphasis) {
         ArrivalEmphasis.URGENT -> MaterialTheme.colorScheme.error
@@ -131,10 +132,13 @@ private fun ArrivalTrainRow(arrival: RealtimeArrival, isFirst: Boolean) {
         ArrivalEmphasis.INACTIVE -> MaterialTheme.colorScheme.tertiary
     }
 
+    // 종이 들어오면서 세로 패딩을 11dp에서 4dp로 줄이고 높이를 52dp로 고정했다.
+    // 11dp를 그대로 두면 36dp 버튼과 합쳐져 행이 60dp까지 늘어난다.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 13.dp, vertical = 11.dp),
+            .heightIn(min = 52.dp)
+            .padding(horizontal = 13.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 시간 열은 폭을 고정해 여러 행의 오른쪽 텍스트가 세로로 정렬되게 한다
@@ -157,6 +161,18 @@ private fun ArrivalTrainRow(arrival: RealtimeArrival, isFirst: Boolean) {
         if (emphasis == ArrivalEmphasis.URGENT) {
             Spacer(Modifier.width(6.dp))
             ImminentChip()
+        }
+        Spacer(Modifier.width(2.dp))
+        // 열차마다 하나씩. 행 높이가 52dp라 IconButton 기본 48dp는 들어가지만
+        // 칩과 나란히 놓이면 텍스트 폭을 너무 먹어 36dp로 줄였다.
+        IconButton(onClick = onAlarmClick, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = if (isAlarmOn) Icons.Default.Notifications else Icons.Default.NotificationsNone,
+                contentDescription = if (isAlarmOn) "알림 해제" else "알림 예약",
+                tint = if (isAlarmOn) MaterialTheme.colorScheme.error
+                       else MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(17.dp)
+            )
         }
     }
 }

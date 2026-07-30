@@ -1,6 +1,7 @@
 package com.jonghyeok.ezegot.dto
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -104,6 +105,38 @@ class RealtimeArrivalTest {
     fun `괄호가 없으면 그대로 판정한다`() {
         assertEquals("도착", arrival("수원 도착").getFormattedMessage())
         assertEquals("출발", arrival("수원 출발").getFormattedMessage())
+    }
+
+    // ── 남은 도착 시간(초) ──────────────────────────────────────
+    //
+    // 알림 예약이 언제 깨어날지, 그리고 "5분 전" 같은 선택지를 고를 수 있는지를
+    // 이 값으로 판단한다. 화면에 찍히는 값과 어긋나면 "5분 전"을 골랐는데
+    // 즉시 울리는 일이 생긴다.
+
+    @Test
+    fun `barvlDt가 있으면 초 단위 실측값을 그대로 쓴다`() {
+        assertEquals(260, arrival("전역 도착", barvl = "260").secondsUntilArrival())
+        assertTrue(arrival("전역 도착", barvl = "260").hasMeasuredArrivalTime())
+    }
+
+    @Test
+    fun `barvlDt가 없으면 화면에 찍히는 추정 분을 초로 되돌린다`() {
+        val row = arrival("[3]번째 전역 (매탄권선)")
+        val shown = Regex("(\\d+)분").find(row.getFormattedMessage())!!.groupValues[1].toInt()
+        assertEquals(shown * 60, row.secondsUntilArrival())
+        assertFalse("추정값은 실측으로 보면 안 된다", row.hasMeasuredArrivalTime())
+    }
+
+    @Test
+    fun `도착이나 진입은 남은 시간이 없다`() {
+        assertEquals(0, arrival("수원 도착").secondsUntilArrival())
+        assertEquals(0, arrival("수원 진입").secondsUntilArrival())
+    }
+
+    @Test
+    fun `barvlDt가 비거나 0이면 실측으로 보지 않는다`() {
+        assertFalse(arrival("수원 도착", barvl = "").hasMeasuredArrivalTime())
+        assertFalse(arrival("수원 도착", barvl = "0").hasMeasuredArrivalTime())
     }
 
     @Test

@@ -134,6 +134,27 @@ data class RealtimeArrival(
         return rawMessage.ifEmpty { "정보 없음" }
     }
 
+    /**
+     * 남은 도착 시간(초). 알림 예약이 언제 깨어날지 계산하는 데 쓴다.
+     *
+     * [barvlDt]가 있으면 그 값이 실측이라 그대로 쓰고, 없으면 화면에 찍히는
+     * "N분 후"를 초로 되돌린다. 즉 화면 표시와 항상 같은 값이다.
+     *
+     * 추정으로 나온 값은 분 단위 반올림을 거친 뒤라 초 정밀도가 없다.
+     * 그 여부는 [hasMeasuredArrivalTime]으로 구분한다.
+     */
+    fun secondsUntilArrival(): Int {
+        val measured = barvlDt.toIntOrNull() ?: 0
+        if (measured > 0) return measured
+
+        val minutes = Regex("(\\d+)분 후").find(getFormattedMessage())
+            ?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        return minutes * 60
+    }
+
+    /** [secondsUntilArrival]이 실측인가 추정인가. 알림 예약의 여유 폭을 정할 때 쓴다 */
+    fun hasMeasuredArrivalTime(): Boolean = (barvlDt.toIntOrNull() ?: 0) > 0
+
     private companion object {
         /** 문자열 끝에 붙는 "(다음 역)". 중첩 괄호까지 한 번에 걷도록 greedy를 쓴다 */
         val TRAILING_PARENTHESES = Regex("""\s*\(.*\)\s*$""")

@@ -45,15 +45,9 @@ class StationViewModel @Inject constructor(
     fun setAlarm(arrival: RealtimeArrival, thresholdMinutes: Int = 3) {
         val station = _uiState.value.stationInfo ?: return
 
-        // barvlDt가 없어도 getFormattedMessage()에서 추출한 대략적인 시간을 사용
-        var arrivalSeconds = arrival.barvlDt.toIntOrNull() ?: 0
-        if (arrivalSeconds <= 0) {
-            val msg = arrival.getFormattedMessage()
-            val minutesMatch = Regex("(\\d+)분 후").find(msg)
-            if (minutesMatch != null) {
-                arrivalSeconds = (minutesMatch.groupValues[1].toIntOrNull() ?: 0) * 60
-            }
-        }
+        // barvlDt가 없으면 화면에 찍히는 추정 분을 초로 되돌려 쓴다.
+        // 화면에서 선택지를 고를 때도 같은 값을 봐야 하므로 DTO로 옮겼다.
+        val arrivalSeconds = arrival.secondsUntilArrival()
 
         viewModelScope.launch {
             alarmManager.scheduleAlarm(

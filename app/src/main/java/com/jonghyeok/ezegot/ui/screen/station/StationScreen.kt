@@ -131,7 +131,19 @@ fun StationScreen(
             title = { Text("도착 알림 설정", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("열차 도착 몇 분 전에 알림을 받을까요?", style = MaterialTheme.typography.bodyMedium)
+                    // 어느 열차인지 밝힌다. 방향에 종이 하나뿐이던 시절에는
+                    // 늘 가장 빠른 열차였으므로 물을 필요가 없었다.
+                    Text(
+                        text = target.alarmTargetLabel(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "도착 몇 분 전에 알림을 받을까요?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Spacer(Modifier.height(4.dp))
                     listOf(1, 3, 5).forEach { min ->
                         Button(
@@ -198,24 +210,25 @@ fun StationScreen(
         }
     }
 
-    /** 알림 아이콘: 그 방향의 가장 빠른 열차로 예약한다 */
-    fun requestAlarm(arrivals: List<RealtimeArrival>) {
-        val target = arrivals.firstOrNull { it.trainNumber.isNotEmpty() } ?: return
+    /** 종을 누른 그 열차로 예약한다 */
+    fun requestAlarm(arrival: RealtimeArrival) {
+        if (arrival.trainNumber.isEmpty()) return
         val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
-        if (granted) alarmTarget = target else { alarmTarget = target; showPermissionRationale = true }
+        alarmTarget = arrival
+        if (!granted) showPermissionRationale = true
     }
 
     /**
-     * 이 방향에 걸려 있는 예약.
+     * 이 열차에 걸려 있는 예약.
      *
      * 열차 번호만 비교하면 같은 열차가 지나는 다른 역을 열었을 때도 종이 켜져 보였다.
-     * 예약은 역 단위로 저장하므로 역 이름까지 함께 본다.
+     * 예약은 (역, 열차) 단위로 저장하므로 역 이름까지 함께 본다.
      */
-    fun activeAlarmFor(arrivals: List<RealtimeArrival>) =
+    fun activeAlarmFor(arrival: RealtimeArrival) =
         uiState.activeAlarms.firstOrNull { alarm ->
-            alarm.stationName == stationName && arrivals.any { it.trainNumber == alarm.trainNo }
+            alarm.stationName == stationName && alarm.trainNo == arrival.trainNumber
         }
 
     /**
@@ -226,12 +239,12 @@ fun StationScreen(
      * 돌아가 아무 일도 일어나지 않았다. 아이콘은 "알림 해제"라고 읽어주는데
      * 해제할 방법이 역 상세에 없어 알림 탭까지 가야 했다.
      */
-    fun toggleAlarm(arrivals: List<RealtimeArrival>) {
-        val active = activeAlarmFor(arrivals)
+    fun toggleAlarm(arrival: RealtimeArrival) {
+        val active = activeAlarmFor(arrival)
         if (active != null) {
             viewModel.cancelAlarm(active.trainNo, active.stationName)
         } else {
-            requestAlarm(arrivals)
+            requestAlarm(arrival)
         }
     }
 
@@ -263,15 +276,15 @@ fun StationScreen(
                 directionLabel = upLabel,
                 lineColor = lineColor,
                 arrivals = upArrivals,
-                isAlarmOn = activeAlarmFor(upArrivals) != null,
-                onAlarmClick = { toggleAlarm(upArrivals) }
+                isAlarmOn = { activeAlarmFor(it) != null },
+                onAlarmClick = { toggleAlarm(it) }
             )
             ArrivalDirectionCard(
                 directionLabel = dnLabel,
                 lineColor = lineColor,
                 arrivals = dnArrivals,
-                isAlarmOn = activeAlarmFor(dnArrivals) != null,
-                onAlarmClick = { toggleAlarm(dnArrivals) }
+                isAlarmOn = { activeAlarmFor(it) != null },
+                onAlarmClick = { toggleAlarm(it) }
             )
 
             StationFirstLastSection(
@@ -304,6 +317,17 @@ private fun List<RealtimeArrival>.directionLabel(fallback: String): String =
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
         ?: fallback
+
+/**
+ * 알림 다이얼로그가 밝히는 대상. "청량리행 · 15분 후 열차".
+ *
+ * 종이 방향마다 하나였을 때는 늘 가장 빠른 열차라 밝힐 필요가 없었지만,
+ * 이제 행마다 걸 수 있으므로 어느 열차인지 보여줘야 한다.
+ */
+private fun RealtimeArrival.alarmTargetLabel(): String {
+    val destination = bstatnNm.trim().takeIf { it.isNotEmpty() }?.let { "${it}행" }
+    return listOfNotNull(destination, "${getFormattedMessage()} 열차").joinToString(" · ")
+}
 
 private fun Context.dial() {
     startActivity(Intent(Intent.ACTION_DIAL).apply { data = Uri.parse("tel:15447788") })
