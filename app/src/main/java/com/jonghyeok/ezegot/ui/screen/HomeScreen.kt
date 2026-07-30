@@ -25,7 +25,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -87,7 +86,7 @@ fun HomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        HomeHeader(onSearchClick = onSearchClick, onSettingsClick = {})
+        HomeHeader(onSearchClick = onSearchClick)
 
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             Spacer(Modifier.height(6.dp))
@@ -118,7 +117,7 @@ fun HomeScreen(
 
 // ── 헤더 ─────────────────────────────────────────────────────────
 @Composable
-private fun HomeHeader(onSearchClick: () -> Unit, onSettingsClick: () -> Unit) {
+private fun HomeHeader(onSearchClick: () -> Unit) {
     Column {
         Row(
             modifier = Modifier
@@ -139,14 +138,6 @@ private fun HomeHeader(onSearchClick: () -> Unit, onSettingsClick: () -> Unit) {
                 Icon(
                     Icons.Default.Search,
                     contentDescription = "검색",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            IconButton(onClick = onSettingsClick) {
-                Icon(
-                    Icons.Default.Settings,
-                    contentDescription = "설정",
                     tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(20.dp)
                 )
