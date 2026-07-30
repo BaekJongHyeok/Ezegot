@@ -15,3 +15,6 @@
 local.properties
 .idea/.gitignore
 .idea/
+
+# 작업 지시 문서 (로컬 전용)
+CLAUDE.md
