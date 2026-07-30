@@ -3,6 +3,7 @@ package com.jonghyeok.ezegot.viewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.jonghyeok.ezegot.api.StationInfoResponse
+import com.jonghyeok.ezegot.api.TimeTableResponse
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.repository.FavoriteRepository
@@ -81,12 +82,9 @@ class StationViewModel @Inject constructor(
     private val _stationLocation = MutableStateFlow<StationInfoResponse?>(null)
     val stationLocation: StateFlow<StationInfoResponse?> = _stationLocation.asStateFlow()
 
-    // ─── 고급 기능 상태 관리 ───
-    private val _timeTable = MutableStateFlow<Pair<com.jonghyeok.ezegot.api.TimeTableResponse?, com.jonghyeok.ezegot.api.TimeTableResponse?>?>(null)
-    val timeTable: StateFlow<Pair<com.jonghyeok.ezegot.api.TimeTableResponse?, com.jonghyeok.ezegot.api.TimeTableResponse?>?> = _timeTable.asStateFlow()
-
-    private val _facilityInfo = MutableStateFlow<com.jonghyeok.ezegot.api.FacilityInfoResponse?>(null)
-    val facilityInfo: StateFlow<com.jonghyeok.ezegot.api.FacilityInfoResponse?> = _facilityInfo.asStateFlow()
+    /** 첫차·막차 시간표 (상행, 하행) */
+    private val _timeTable = MutableStateFlow<Pair<TimeTableResponse?, TimeTableResponse?>?>(null)
+    val timeTable: StateFlow<Pair<TimeTableResponse?, TimeTableResponse?>?> = _timeTable.asStateFlow()
 
     fun loadStationInfo(stationName: String, line: String) {
         val info = BasicStationInfo(stationName, line)
@@ -141,19 +139,13 @@ class StationViewModel @Inject constructor(
         }
     }
 
-    // ─── 고급 기능 데이터 로드 ───
+    /** 첫차·막차 시간표 로드. 실패해도 null로 유지되어 UI가 죽지 않는다. */
     fun loadAdvancedStationInfo(stationName: String, lineNumber: String) {
         viewModelScope.launch {
-            // 병렬 수행 트리거 (에러가 나도 UI가 죽지 않게 null 처리 됨)
-            launch {
-                val c = java.util.Calendar.getInstance()
-                val day = c.get(java.util.Calendar.DAY_OF_WEEK)
-                val isWeekend = day == java.util.Calendar.SATURDAY || day == java.util.Calendar.SUNDAY
-                _timeTable.value = stationRepository.getStationTimeTable(stationName, lineNumber, isWeekend)
-            }
-            launch {
-                _facilityInfo.value = stationRepository.getStationFacilityInfo(stationName)
-            }
+            val c = java.util.Calendar.getInstance()
+            val day = c.get(java.util.Calendar.DAY_OF_WEEK)
+            val isWeekend = day == java.util.Calendar.SATURDAY || day == java.util.Calendar.SUNDAY
+            _timeTable.value = stationRepository.getStationTimeTable(stationName, lineNumber, isWeekend)
         }
     }
 }

@@ -115,9 +115,7 @@ fun StationScreen(
         )
     }
 
-    // 고급 기능 State
     val timeTable by viewModel.timeTable.collectAsState()
-    val facilityInfo by viewModel.facilityInfo.collectAsState()
 
     LaunchedEffect(stationLocation) {
         stationLocation?.let { 
@@ -294,11 +292,8 @@ fun StationScreen(
                 }
                 Spacer(Modifier.height(16.dp))
 
-                // 역 정보 및 편의 시설
-                StationInfoCard(
-                    address = stationLocation?.address ?: "주소 정보 없음",
-                    facility = facilityInfo
-                )
+                // 역 정보
+                StationInfoCard(address = stationLocation?.address ?: "주소 정보 없음")
                 Spacer(Modifier.height(32.dp))
             }
 
@@ -1050,7 +1045,7 @@ fun StationMapCard(stationLocation: StationInfoResponse) {
 }
 
 @Composable
-fun StationInfoCard(address: String, facility: com.jonghyeok.ezegot.api.FacilityInfoResponse? = null) {
+fun StationInfoCard(address: String) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -1061,7 +1056,7 @@ fun StationInfoCard(address: String, facility: com.jonghyeok.ezegot.api.Facility
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "기기 정보 및 편의시설",
+                text = "역 정보",
                 style = MaterialTheme.typography.titleSmall,
                 color = TextPrimary,
                 fontWeight = FontWeight.SemiBold
@@ -1072,35 +1067,7 @@ fun StationInfoCard(address: String, facility: com.jonghyeok.ezegot.api.Facility
             InfoRow(label = "대표번호", value = "1544-7788")
             Spacer(Modifier.height(8.dp))
             InfoRow(label = "유실물센터", value = "1544-7788")
-            
-            // 편의시설 데이터가 로드되었다면 표시
-            facility?.facilities?.firstOrNull()?.let { fac ->
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider(color = DividerColor)
-                Spacer(Modifier.height(12.dp))
-                
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    if (fac.hasElevator) FacilityBadge("엘리베이터")
-                    if (fac.hasWheelchairLift) FacilityBadge("휠체어 리프트")
-                    if (fac.restroomLocation.isNotEmpty()) FacilityBadge("화장실: ${fac.restroomLocation}")
-                }
-            }
         }
-    }
-}
-
-@Composable
-fun FacilityBadge(text: String) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = SkyBlue400.copy(alpha = 0.1f)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = Navy800,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-        )
     }
 }
 
