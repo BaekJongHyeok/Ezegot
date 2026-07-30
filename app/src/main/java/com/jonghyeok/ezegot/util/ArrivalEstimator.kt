@@ -1,7 +1,9 @@
 package com.jonghyeok.ezegot.util
 
 import com.jonghyeok.ezegot.dto.RealtimeArrival
-import java.util.Calendar
+import java.time.Clock
+import java.time.DayOfWeek
+import java.time.ZonedDateTime
 
 object ArrivalEstimator {
     
@@ -33,16 +35,17 @@ object ArrivalEstimator {
      * 현재 시간이 출퇴근(Rush Hour) 시간대인지 판단하여 가중치를 반환
      * 출근: 평일 07:00 ~ 09:30 (+15% 지연)
      * 퇴근: 평일 17:30 ~ 20:00 (+20% 지연)
+     *
+     * [clock]으로 시각을 주입받는다. 기본값은 기기 타임존의 현재 시각이라
+     * 운영 동작은 이전과 같고, 테스트에서만 고정 시각을 넣을 수 있다.
      */
-    private fun getCongestionMultiplier(): Double {
-        val calendar = Calendar.getInstance()
-        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-        // 주말(토, 일)은 해당 없음
-        if (dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY) return 1.0
+    private fun getCongestionMultiplier(clock: Clock): Double {
+        val now = ZonedDateTime.now(clock)
 
-        val hour = calendar.get(Calendar.HOUR_OF_DAY)
-        val minute = calendar.get(Calendar.MINUTE)
-        val timeInMinutes = hour * 60 + minute
+        // 주말(토, 일)은 해당 없음
+        if (now.dayOfWeek == DayOfWeek.SATURDAY || now.dayOfWeek == DayOfWeek.SUNDAY) return 1.0
+
+        val timeInMinutes = now.hour * 60 + now.minute
 
         val morningRushStart = 7 * 60         // 07:00
         val morningRushEnd = 9 * 60 + 30      // 09:30
@@ -58,8 +61,15 @@ object ArrivalEstimator {
 
     /**
      * 역 개수와 열차 정보를 바탕으로 정교한 소요 시간(분)을 계산
+     *
+     * @param clock 혼잡도 판단에 쓸 시각. 기본값은 기기 현재 시각이며,
+     *              테스트에서 [Clock.fixed]로 특정 시간대를 재현할 때만 지정한다.
      */
-    fun estimateMinutesFromStations(arrival: RealtimeArrival, stationCount: Int): Int {
+    fun estimateMinutesFromStations(
+        arrival: RealtimeArrival,
+        stationCount: Int,
+        clock: Clock = Clock.systemDefaultZone()
+    ): Int {
         // 1. 호선별 베이스 타임 찾기 (없으면 기본값 2.0)
         val baseTimePerStation = lineAverageTimes[arrival.subwayId] ?: 2.0
 
@@ -72,7 +82,7 @@ object ArrivalEstimator {
         }
 
         // 3. 시간대별 혼잡도 지연 가중치 적용
-        val congestionMultiplier = getCongestionMultiplier()
+        val congestionMultiplier = getCongestionMultiplier(clock)
 
         // 최종 수식: (역 개수 * 호선 기본 소요시간) * 급행 단축 * 혼잡 지연
         val rawEstimatedMinutes = (stationCount * baseTimePerStation) * expressMultiplier * congestionMultiplier

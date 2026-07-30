@@ -1,8 +1,10 @@
 package com.jonghyeok.ezegot.viewModel
 
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.dto.BasicStationInfo
+import com.jonghyeok.ezegot.dto.FavoriteStation
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.dto.StationInfo
 import com.jonghyeok.ezegot.dto.NearbyStation
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalTime
 import kotlin.math.*
 import javax.inject.Inject
 
@@ -30,10 +33,10 @@ class MainViewModel @Inject constructor(
     private val mainRepository: MainRepository,
     private val favoriteRepository: FavoriteRepository,
     private val locationRepository: LocationRepository
-) : BaseViewModel() {
+) : ViewModel() {
 
-    // ── 즐겨찾기 ─────────────────────────────────────────────────
-    val favoriteStationList: StateFlow<List<BasicStationInfo>> = favoriteRepository.favorites
+    // ── 즐겨찾기 (역 단위) ───────────────────────────────────────
+    val favoriteStationList: StateFlow<List<FavoriteStation>> = favoriteRepository.favorites
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     // ── 실시간 도착 정보 (stationName → List) ─────────────────────
@@ -44,15 +47,47 @@ class MainViewModel @Inject constructor(
     private val _loadingStates = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val loadingStates: StateFlow<Map<String, Boolean>> = _loadingStates.asStateFlow()
 
+    /**
+     * 도착 정보가 마지막으로 화면에 반영된 시각.
+     *
+     * 새로고침 버튼을 누른 시각이 아니라 응답이 실제로 들어온 시각이다.
+     * 누른 시각을 쓰면 요청이 실패해도 시각만 갱신돼, 오래된 데이터가
+     * 방금 갱신된 것처럼 보인다.
+     */
+    private val _lastUpdatedAt = MutableStateFlow<LocalTime?>(null)
+    val lastUpdatedAt: StateFlow<LocalTime?> = _lastUpdatedAt.asStateFlow()
+
     // ── 근처 역 ──────────────────────────────────────────────────
     private val _nearbyStationList = MutableStateFlow<List<NearbyStation>>(emptyList())
     val nearbyStationList: StateFlow<List<NearbyStation>> = _nearbyStationList.asStateFlow()
+
+    /**
+     * 가장 가까운 역 하나의 도착 정보.
+     *
+     * 근처 역 목록 전체에 도착을 붙이면 역 수만큼 API를 부르게 된다.
+     * 일일 1,000건 제한이 있어 최근접 한 곳만 호출한다.
+     */
+    private val _nearestArrivals = MutableStateFlow<List<RealtimeArrival>>(emptyList())
+    val nearestArrivals: StateFlow<List<RealtimeArrival>> = _nearestArrivals.asStateFlow()
+
+    private var nearestArrivalStation: String? = null
+    private var nearestArrivalJob: Job? = null
+
+    // ── 현재 위치 ────────────────────────────────────────────────
+    private val _locationState = MutableStateFlow<LocationState>(LocationState.Loading)
+    val locationState: StateFlow<LocationState> = _locationState.asStateFlow()
 
     private var stationNameMap: Map<String, List<StationInfo>> = emptyMap()
     private var locationsCache: List<StationInfoResponse> = emptyList()
 
     // 새로고침 시 이전 Job 취소용
     private var arrivalJob: Job? = null
+
+    // 위치 조회 Job. 중복 실행 방지 및 재시도 시 취소용
+    private var locationJob: Job? = null
+
+    // 초기 데이터(역 목록·위경도) 로드 Job. 근처 역 계산이 이 완료를 기다린다
+    private var initialDataJob: Job? = null
 
     init {
         loadInitialData()
@@ -61,9 +96,8 @@ class MainViewModel @Inject constructor(
 
     // ── 초기 데이터 로드 ─────────────────────────────────────────
     private fun loadInitialData() {
-        viewModelScope.launch {
+        initialDataJob = viewModelScope.launch {
             val stationsDeferred  = launch { mainRepository.getAllStations().let { s ->
-                setAllStations(s)
                 stationNameMap = s.groupBy { it.stationName }
             }}
             val locationsDeferred = launch { mainRepository.getStationsLocation().also { locationsCache = it } }
@@ -81,7 +115,9 @@ class MainViewModel @Inject constructor(
     private fun observeFavoritesForAutoRefresh() {
         viewModelScope.launch {
             favoriteStationList
-                .map { it.map { s -> s.stationName } }
+                // 실시간 API는 역 이름으로 부른다. 환승역을 두 노선으로 담아도
+                // 한 번만 부른다. 일일 1,000건 제한이 있어 중복 호출을 두면 안 된다.
+                .map { list -> list.map { it.stationName }.distinct() }
                 .distinctUntilChanged()
                 .collect { names ->
                     streamRealtimeArrival(names)
@@ -104,7 +140,7 @@ class MainViewModel @Inject constructor(
     fun loadRealtimeArrival() {
         val favorites = favoriteStationList.value
         if (favorites.isEmpty()) return
-        streamRealtimeArrival(favorites.map { it.stationName })
+        streamRealtimeArrival(favorites.map { it.stationName }.distinct())
     }
 
     private fun streamRealtimeArrival(stationNames: List<String>) {
@@ -128,33 +164,72 @@ class MainViewModel @Inject constructor(
                     // 응답이 오는 즉시 해당 카드만 업데이트 (전체 대기 없음)
                     _realtimeArrivalInfo.update { current -> current + (name to arrivals) }
                     _loadingStates.update   { current -> current + (name to false) }
+
+                    // 실제 데이터가 들어온 경우에만 갱신 시각으로 인정한다.
+                    // Repository가 실패 시 빈 값을 반환하므로 빈 응답은 실패와
+                    // 구분되지 않는다. 이때 시각을 올리면 실패를 성공처럼 보이게 한다.
+                    if (arrivals.isNotEmpty()) {
+                        _lastUpdatedAt.value = LocalTime.now()
+                    }
                 }
             }
         }
     }
 
     // ── GPS – Two-phase 패턴 ──────────────────────────────────────
+    /**
+     * 현재 위치를 조회하고 [locationState]에 반영한다.
+     *
+     * Phase 1은 Repository가 담당한다(캐시된 위치 → 없으면 첫 fix 대기).
+     * 제한 시간 안에 하나도 못 얻으면 [LocationState.Unavailable]로 확정해
+     * 화면이 기본 좌표에 머무르는 대신 상태를 보여줄 수 있게 한다.
+     * Phase 2는 이후 지속 갱신으로 더 정확한 위치를 반영한다.
+     */
     fun updateCurrentLocation() {
-        viewModelScope.launch {
-            // Phase 1: 캐시된 마지막 위치로 즉시 처리
-            locationRepository.getLastKnownLocation()?.let { lastLoc ->
-                fetchNearbyStations(lastLoc.latitude, lastLoc.longitude)
+        // 이미 조회 중이면 중복 실행하지 않는다 (탭 전환 시 재호출 방지)
+        if (locationJob?.isActive == true) return
+
+        locationJob = viewModelScope.launch {
+            _locationState.value = LocationState.Loading
+
+            val first = locationRepository.getCurrentLocation()
+            if (first == null) {
+                _locationState.value = LocationState.Unavailable
+                return@launch
             }
+            _locationState.value = LocationState.Available(first.latitude, first.longitude)
+            fetchNearbyStations(first.latitude, first.longitude)
+
             // Phase 2: 지속 GPS 갱신
             locationRepository.requestLocationUpdates().collect { location ->
+                _locationState.value = LocationState.Available(location.latitude, location.longitude)
                 fetchNearbyStations(location.latitude, location.longitude)
             }
         }
     }
 
+    /** 위치 조회 실패 후 사용자가 다시 시도할 때 호출한다. */
+    fun retryLocation() {
+        locationJob?.cancel()
+        locationJob = null
+        updateCurrentLocation()
+    }
+
     // ── 근처 역 계산 ──────────────────────────────────────────────
     private suspend fun fetchNearbyStations(lat: Double, lon: Double) {
+        // 위경도 목록이 아직 로드 전이면 빈 결과가 나오므로 완료를 기다린다
+        initialDataJob?.join()
+
         val result = withContext(Dispatchers.Default) {
             locationsCache
                 .filter { abs(lat - it.latitude) < 0.04 && abs(lon - it.longitude) < 0.05 }
                 .mapNotNull { loc ->
                     val d = haversine(lat, lon, loc.latitude, loc.longitude)
-                    if (d <= 3.0) loc to d else null
+                    // 반경만으로 자르면 역이 성긴 지역에서 섹션이 1개만 남거나 비어
+                    // "내 주변 역"이 이름값을 못 한다. 실제로 1.5km 안에 한 곳뿐인
+                    // 위치가 있었다. 거리·도보 시간을 함께 보여주므로 얼마나 먼지는
+                    // 목록이 알려준다. 상한은 "주변"이라 부를 수 없는 거리만 막는다.
+                    if (d <= NEARBY_RADIUS_KM) loc to d else null
                 }
                 .sortedBy { it.second }
                 .flatMap { (loc, d) ->
@@ -171,6 +246,28 @@ class MainViewModel @Inject constructor(
                 .distinctBy { it.stationName to it.lineNumber }
         }
         _nearbyStationList.value = result
+        loadNearestArrival(result.firstOrNull())
+    }
+
+    /**
+     * 가장 가까운 역 하나의 도착 정보만 불러온다.
+     *
+     * 목록 전체에 붙이면 근처 역 수만큼 실시간 API를 호출하게 되는데,
+     * 일일 1,000건 제한이 있어 감당할 수 없다. 한 건만 늘린다.
+     */
+    private fun loadNearestArrival(nearest: NearbyStation?) {
+        if (nearest == null) {
+            _nearestArrivals.value = emptyList()
+            return
+        }
+        // 같은 역을 다시 부르지 않는다 (위치가 조금 움직여도 최근접은 잘 안 바뀐다)
+        if (nearest.stationName == nearestArrivalStation) return
+        nearestArrivalStation = nearest.stationName
+
+        nearestArrivalJob?.cancel()
+        nearestArrivalJob = viewModelScope.launch {
+            _nearestArrivals.value = mainRepository.getRealtimeArrival(nearest.stationName)
+        }
     }
 
     // ── Haversine ─────────────────────────────────────────────────
@@ -181,5 +278,17 @@ class MainViewModel @Inject constructor(
         val a = sin(dLat / 2).pow(2) +
                 cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2)
         return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+    }
+
+    companion object {
+        /**
+         * 근처 역 반경(km).
+         *
+         * 1.5km(도보 약 22분)로 잡았더니 역이 성긴 지역에서 한 곳만 잡혀
+         * 섹션이 제 역할을 못 했다. 3km(도보 약 45분)까지 넓힌다.
+         * 화면은 가까운 순으로 3개까지만 보여주므로, 도심에서 목록이 길어지지는 않는다.
+         * 그보다 먼 역은 "주변"이라 부를 수 없어 남긴다.
+         */
+        const val NEARBY_RADIUS_KM = 3.0
     }
 }

@@ -11,7 +11,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -32,19 +32,21 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.StationInfo
-import com.jonghyeok.ezegot.ui.theme.*
+import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
+import com.jonghyeok.ezegot.ui.theme.onSubwayLineColor
 import com.jonghyeok.ezegot.viewModel.SearchViewModel
 
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
-    onBack: () -> Unit,
-    onStationClick: (String, String) -> Unit
+    onStationClick: (String, String) -> Unit,
+    onBack: () -> Unit
 ) {
     val textState by viewModel.textState.collectAsState()
     val filteredStations by viewModel.filteredStations.collectAsState()
     val recentSearches by viewModel.recentSearches.collectAsState()
     val allStations by viewModel.allStationsInfoList.collectAsState()
+    val lastFilteredQuery by viewModel.lastFilteredQuery.collectAsState()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
@@ -57,29 +59,37 @@ fun SearchScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundLight)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // ── Header ──────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Navy900, Navy800)))
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .background(MaterialTheme.colorScheme.surface)
+                // 뒤로가기 IconButton이 48dp라 좌측 여백은 버튼이 대신한다
+                .padding(start = 4.dp, top = 14.dp, end = 16.dp, bottom = 14.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "뒤로", tint = TextOnDark)
+                // 탭으로 들어와도 홈이 스택 아래에 있어 시스템 뒤로가기와 같은 곳으로 간다.
+                // 키보드가 올라와 있으면 시스템 뒤로가기는 키보드부터 내리므로,
+                // 화면을 벗어나려면 두 번 눌러야 한다. 이 버튼은 한 번에 나간다.
+                IconButton(onClick = { keyboardController?.hide(); onBack() }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "뒤로",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
-
                 Surface(
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    color = Navy700
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
                         modifier = Modifier
@@ -91,7 +101,7 @@ fun SearchScreen(
                         Icon(
                             Icons.Default.Search,
                             contentDescription = null,
-                            tint = SkyBlue400,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Box(modifier = Modifier.weight(1f)) {
@@ -99,7 +109,8 @@ fun SearchScreen(
                                 Text(
                                     text = "지하철 역 이름 검색",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = TextHint
+                                    // 검색 필드는 surfaceVariant 위에 있다
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             BasicTextField(
@@ -111,8 +122,8 @@ fun SearchScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextOnDark),
-                                cursorBrush = SolidColor(SkyBlue400),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
@@ -130,14 +141,20 @@ fun SearchScreen(
                             )
                         }
                         if (textState.text.isNotEmpty()) {
+                            // 터치 영역은 IconButton 기본값(48dp)을 그대로 두고 아이콘만 줄인다.
+                            // Modifier.size()를 주면 최소 터치 크기가 함께 무효화된다.
                             IconButton(
                                 onClick = {
                                     viewModel.onTextChange(TextFieldValue(""))
                                     // debounce가 빈 쿼리를 처리 → filteredStations 초기화
-                                },
-                                modifier = Modifier.size(20.dp)
+                                }
                             ) {
-                                Icon(Icons.Default.Close, contentDescription = "지우기", tint = TextHint)
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "지우기",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,   // surfaceVariant 배경
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
@@ -146,20 +163,36 @@ fun SearchScreen(
         }
 
         // ── 검색 결과 or 최근검색 ────────────────────────────────
-        if (textState.text.isNotEmpty() && filteredStations.isNotEmpty()) {
-            SearchResultList(
-                stations = filteredStations,
-                onItemClick = { station ->
-                    viewModel.saveRecentSearch(station.stationName, station.lineNumber)
-                    onStationClick(station.stationName, station.lineNumber)
-                }
-            )
-        } else if (textState.text.isEmpty()) {
-            RecentSearchList(
-                recentSearches = recentSearches,
-                onItemClick = { item -> onStationClick(item.stationName, item.lineNumber) },
-                onDelete = { item -> viewModel.deleteRecentSearch(item.stationName, item.lineNumber) }
-            )
+        // "결과 0건" 안내는 이 검색어로 filter가 실제 실행됐고(lastFilteredQuery)
+        // 역 목록도 로드된 뒤에만 띄운다. 그 전의 0건은 아직 모르는 상태라
+        // 안내를 띄우면 debounce 200ms 동안 잘못된 문구가 깜빡인다.
+        val filterSettled = lastFilteredQuery == textState.text && allStations.isNotEmpty()
+        when {
+            textState.text.isNotEmpty() && filteredStations.isNotEmpty() -> {
+                SearchResultList(
+                    stations = filteredStations,
+                    onItemClick = { station ->
+                        viewModel.saveRecentSearch(station.stationName, station.lineNumber)
+                        onStationClick(station.stationName, station.lineNumber)
+                    }
+                )
+            }
+            textState.text.isNotEmpty() && filterSettled -> {
+                // 이 화면은 키보드가 항상 올라와 있어 세로 중앙 정렬하면 가려진다.
+                // 고정 높이로 두어 헤더 바로 아래, 키보드 위에 오도록 한다.
+                EmptyStateView(
+                    icon = Icons.Default.Search,
+                    title = "검색 결과가 없습니다",
+                    description = "역 이름을 다시 확인해 주세요"
+                )
+            }
+            textState.text.isEmpty() -> {
+                RecentSearchList(
+                    recentSearches = recentSearches,
+                    onItemClick = { item -> onStationClick(item.stationName, item.lineNumber) },
+                    onDelete = { item -> viewModel.deleteRecentSearch(item.stationName, item.lineNumber) }
+                )
+            }
         }
     }
 }
@@ -176,24 +209,19 @@ fun SearchResultList(stations: List<StationInfo>, onItemClick: (StationInfo) -> 
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = TextHint, modifier = Modifier.size(16.dp))
-                    Text(text = station.stationName, style = MaterialTheme.typography.bodyLarge, color = TextPrimary)
+                // 돋보기 아이콘은 행마다 반복돼도 알려주는 것이 없다.
+                // 그 자리를 호선 아이콘으로 바꾸면 어느 노선인지 바로 보인다.
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    SubwayLineIcon(lineName = station.lineNumber)
+                    Text(text = station.stationName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 }
-                val lineColor = getSubwayLineColor(station.lineNumber)
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = lineColor
-                ) {
-                    Text(
-                        text = station.lineNumber.removePrefix("0"),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
+                Text(
+                    text = station.lineNumber.removePrefix("0"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 20.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 20.dp))
         }
     }
 }
@@ -204,6 +232,17 @@ fun RecentSearchList(
     onItemClick: (BasicStationInfo) -> Unit,
     onDelete: (BasicStationInfo) -> Unit
 ) {
+    if (recentSearches.isEmpty()) {
+        // 앱 첫 실행 시 반드시 마주치는 화면이라 안내가 없으면 백지로 보인다.
+        // 키보드가 올라와 있으므로 고정 높이로 두어 가려지지 않게 한다.
+        EmptyStateView(
+            icon = Icons.Default.Search,
+            title = "최근 검색 기록이 없습니다",
+            description = "역 이름을 검색해 보세요"
+        )
+        return
+    }
+
     Column(modifier = Modifier.padding(top = 24.dp)) {
         if (recentSearches.isNotEmpty()) {
             Row(
@@ -216,8 +255,8 @@ fun RecentSearchList(
                 Text(
                     text = "최근 검색",
                     style = MaterialTheme.typography.titleSmall,
-                    color = TextSecondary,
-                    fontWeight = FontWeight.SemiBold
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
@@ -231,22 +270,23 @@ fun RecentSearchList(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = TextHint, modifier = Modifier.size(16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SubwayLineIcon(lineName = item.lineNumber)
                         Column {
-                            Text(text = item.stationName, style = MaterialTheme.typography.bodyLarge, color = TextPrimary)
+                            Text(text = item.stationName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                             Text(
                                 text = item.lineNumber.removePrefix("0"),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextHint
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-                    IconButton(onClick = { onDelete(item) }, modifier = Modifier.size(20.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "삭제", tint = TextHint, modifier = Modifier.size(16.dp))
+                    // 터치 영역은 IconButton 기본값(48dp) 유지, 아이콘만 16dp
+                    IconButton(onClick = { onDelete(item) }) {
+                        Icon(Icons.Default.Close, contentDescription = "삭제", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                     }
                 }
-                HorizontalDivider(color = DividerColor, modifier = Modifier.padding(horizontal = 20.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 20.dp))
             }
         }
     }

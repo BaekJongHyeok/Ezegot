@@ -1,11 +1,13 @@
 package com.jonghyeok.ezegot.repository
 
+import android.content.Context
 import android.location.Geocoder
-import com.jonghyeok.ezegot.MyApplication
+import android.util.Log
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.di.ApiKeys
 import com.jonghyeok.ezegot.dto.RealtimeArrival
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -24,6 +26,7 @@ class StationRepository @Inject constructor(
     @Named("realtimeArrivalApi") private val realtimeApi: SubwayApiService,
     @Named("extendedApi") private val extendedApi: SubwayApiService,
     @Named("stationInfoApi") private val stationInfoApi: SubwayApiService,
+    @ApplicationContext private val context: Context,
     private val apiKeys: ApiKeys,
     private val mainRepository: MainRepository  // 위치 목록 캐시 공유
 ) {
@@ -98,11 +101,12 @@ class StationRepository @Inject constructor(
     suspend fun getAddress(lat: Double, lon: Double): String =
         withContext(Dispatchers.IO) {
             runCatching {
-                val geocoder = Geocoder(MyApplication.context, Locale.getDefault())
+                val geocoder = Geocoder(context, Locale.getDefault())
                 @Suppress("DEPRECATION")
                 geocoder.getFromLocation(lat, lon, 1)
                     ?.firstOrNull()
                     ?.getAddressLine(0)
+                    ?.trimAddressPrefix()
                     ?: "주소를 찾을 수 없습니다."
             }.getOrDefault("주소를 가져올 수 없음")
         }
@@ -131,8 +135,11 @@ class StationRepository @Inject constructor(
 
             if (!frCode.isNullOrEmpty()) {
                 val weekCode = if (isWeekend) "2" else "1"
-                up = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "1") }.getOrNull()
-                down = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "2") }.getOrNull()
+                // 서울 API의 upDownCode는 1이 하행, 2가 상행이다. 이름과 반대라
+                // "1"을 up에 넣고 있었고, 첫차·막차와 시간표 방향이 통째로 뒤바뀌어 있었다.
+                // 7호선 강남구청·4호선 사당·1호선 남영에서 교차 확인했다.
+                up = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "2") }.getOrNull()
+                down = runCatching { stationInfoApi.getStationTimeTable(apiKeys.seoulTimetable, frCode, weekCode, "1") }.getOrNull()
             }
 
             val upEmpty = up == null || up.schedules.isEmpty()
@@ -143,9 +150,11 @@ class StationRepository @Inject constructor(
                 val tagoListRes = runCatching { extendedApi.getTagoStationList(apiKeys.tago, cleanName) }.getOrNull()
                 var nodeId: String? = null
 
-                tagoListRes?.body()?.let { json ->
+                // try/catch를 let의 꼬리 표현식으로 두면 반환형 추론이 걸리므로 문(statement)으로 쓴다
+                val listBody = tagoListRes?.body()
+                if (listBody != null) {
                     try {
-                        val items = json.asJsonObject.getAsJsonObject("response").getAsJsonObject("body").getAsJsonObject("items")
+                        val items = listBody.asJsonObject.getAsJsonObject("response").getAsJsonObject("body").getAsJsonObject("items")
                         if (items.has("item")) {
                             val itemElement = items.get("item")
                             val itemList = if (itemElement.isJsonArray) itemElement.asJsonArray else com.google.gson.JsonArray().apply { add(itemElement) }
@@ -163,7 +172,7 @@ class StationRepository @Inject constructor(
                             }
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e(TAG, "TAGO 역 목록 파싱 실패: $cleanName", e)
                     }
                 }
 
@@ -174,8 +183,8 @@ class StationRepository @Inject constructor(
                         java.util.Calendar.SUNDAY   -> "03"
                         else                         -> "01"
                     }
-                    val tagoUp   = fetchTagoTimeTable(nodeId!!, tagoDayCode, "U", apiKeys.tago, extendedApi)
-                    val tagoDown = fetchTagoTimeTable(nodeId!!, tagoDayCode, "D", apiKeys.tago, extendedApi)
+                    val tagoUp   = fetchTagoTimeTable(nodeId, tagoDayCode, "U", apiKeys.tago, extendedApi)
+                    val tagoDown = fetchTagoTimeTable(nodeId, tagoDayCode, "D", apiKeys.tago, extendedApi)
                     return@withContext Pair(tagoUp, tagoDown)
                 }
             }
@@ -218,8 +227,26 @@ class StationRepository @Inject constructor(
                 com.jonghyeok.ezegot.api.TimeTableResponse(schedules)
             } else null
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "TAGO 시간표 파싱 실패: nodeId=$nodeId, $upDownCode", e)
             null
         }
     }
+
+    private companion object {
+        const val TAG = "StationRepository"
+    }
 }
+
+/**
+ * Geocoder 주소에서 불필요한 앞부분을 뗀다.
+ *
+ * 한국 로케일에서도 "대한민국 서울특별시 …"처럼 국가명이 붙어 온다.
+ * 국내 전용 앱이라 국가명은 정보가 없고 한 줄 폭만 잡아먹는다.
+ * 우편번호가 앞에 붙는 경우도 있어 함께 뗀다.
+ */
+private fun String.trimAddressPrefix(): String =
+    trim()
+        .removePrefix("대한민국")
+        .trim()
+        .replace(Regex("^\\d{5,6}\\s+"), "")
+        .trim()

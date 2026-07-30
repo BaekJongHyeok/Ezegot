@@ -1,58 +1,68 @@
 package com.jonghyeok.ezegot.ui.screen
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.location.LocationManager
-import android.net.Uri
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import com.jonghyeok.ezegot.util.forDisplay
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SyncAlt
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.launch
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.*
 import com.jonghyeok.ezegot.SubwayLine
-import com.jonghyeok.ezegot.dto.BasicStationInfo
+import com.jonghyeok.ezegot.dto.FavoriteStation
 import com.jonghyeok.ezegot.dto.NearbyStation
 import com.jonghyeok.ezegot.dto.RealtimeArrival
-import com.jonghyeok.ezegot.ui.theme.*
+import com.jonghyeok.ezegot.dto.directionPairFor
+import com.jonghyeok.ezegot.dto.matchesDirection
+import com.jonghyeok.ezegot.ui.theme.EzegotWordmark
+import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
+import com.jonghyeok.ezegot.util.ArrivalEmphasis
+import com.jonghyeok.ezegot.util.emphasis
 import com.jonghyeok.ezegot.viewModel.MainViewModel
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
-// ── 탭 정의 ──────────────────────────────────────────────────────
-internal enum class HomeTab(val label: String) { FAVORITE("즐겨찾기"), NEARBY("근처 역") }
-
+/**
+ * 홈.
+ *
+ * 즐겨찾기를 캐러셀 3개 + 리스트로 나눠 두었는데, 즐겨찾기가 역 단위가 되면서
+ * 카드와 행이 담는 정보가 같아졌다. 그러자 카드가 더 주는 것은 큰 글자뿐인데
+ * 가로 스와이프를 요구하고, 섹션 제목이 둘로 갈리고, 3+1 같은 분할이
+ * 자의적으로 보였다. 리스트 하나로 합치고 도착 시간을 키웠다.
+ */
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel = hiltViewModel(),
@@ -65,720 +75,499 @@ fun HomeScreen(
         viewModel.updateCurrentLocation()
     }
 
-    var selectedTab by remember { mutableStateOf(HomeTab.FAVORITE) }
+    val favorites by viewModel.favoriteStationList.collectAsState()
+    val arrivalMap by viewModel.realtimeArrivalInfo.collectAsState()
+    val nearbyStations by viewModel.nearbyStationList.collectAsState()
+    val nearestArrivals by viewModel.nearestArrivals.collectAsState()
+    val lastUpdatedAt by viewModel.lastUpdatedAt.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundLight)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // ── ① 고정 상단 헤더 (항상 보임) ─────────────────────────
-        StickyHeader(
-            onSearchClick = onSearchClick,
-            onMapClick = onMapClick,
-            onSettingsClick = {}
-        )
+        HomeHeader(onSearchClick = onSearchClick)
 
-        // ── ② 탭 바 ───────────────────────────────────────────────
-        HomeTabBar(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            Spacer(Modifier.height(6.dp))
 
-        // ── ③ 탭 콘텐츠 (스크롤) ─────────────────────────────────
-        when (selectedTab) {
-            HomeTab.FAVORITE -> FavoriteTab(viewModel, onStationClick)
-            HomeTab.NEARBY   -> NearbyTab(viewModel, onStationClick)
+            FavoriteSection(
+                favorites = favorites,
+                arrivalMap = arrivalMap,
+                updatedAt = lastUpdatedAt,
+                onRefresh = { viewModel.loadRealtimeArrival() },
+                onStationClick = onStationClick
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            NearbySection(
+                stations = nearbyStations,
+                nearestArrivals = nearestArrivals,
+                onMapClick = onMapClick,
+                onStationClick = onStationClick
+            )
+
+            // 마지막 카드가 하단바에 잘리지 않도록. Scaffold가 이미 바 높이만큼
+            // 인셋을 주지만, 카드 테두리가 바로 맞닿아 잘려 보였다.
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
-// ── 고정 헤더 ────────────────────────────────────────────────────
+// ── 헤더 ─────────────────────────────────────────────────────────
 @Composable
-fun StickyHeader(
-    onSearchClick: () -> Unit,
-    onMapClick: () -> Unit,
-    onSettingsClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Navy900, Navy800)))
-            .padding(horizontal = 16.dp, vertical = 14.dp)
-    ) {
-        // 앱 이름 + 설정
+private fun HomeHeader(onSearchClick: () -> Unit) {
+    Column {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "EZEGOT",
-                style = MaterialTheme.typography.titleLarge,
-                color = TextOnDark,
-                fontWeight = FontWeight.Black
-            )
-            IconButton(onClick = onSettingsClick, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Settings, contentDescription = "설정", tint = TextOnDark.copy(alpha = 0.6f))
-            }
-        }
-
-        Spacer(Modifier.height(10.dp))
-
-        // 검색바 (항상 visible)
-        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
-                .clickable { onSearchClick() },
-            shape = RoundedCornerShape(14.dp),
-            color = Navy700
+                .background(MaterialTheme.colorScheme.surface)
+                .height(48.dp)
+                .padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "지하철 역 이름 검색",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextHint
+            // 웨이트 예외는 Type.kt의 EzegotWordmark 한 곳에만 있다
+            Text(
+                text = "EZEGOT",
+                style = EzegotWordmark,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onSearchClick) {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = "검색",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        tint = TextOnDark.copy(alpha = 0.5f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
             }
         }
+        HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
     }
 }
 
-// ── 탭 바 ────────────────────────────────────────────────────────
+// ── 내 주변 역 ───────────────────────────────────────────────────
 @Composable
-internal fun HomeTabBar(selectedTab: HomeTab, onTabSelected: (HomeTab) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Navy900)
-            .padding(horizontal = 16.dp)
+private fun NearbySection(
+    stations: List<NearbyStation>,
+    nearestArrivals: List<RealtimeArrival>,
+    onMapClick: () -> Unit,
+    onStationClick: (String, String) -> Unit
+) {
+    // 반경을 좁혀도 도심에서는 후보가 많다. 화면 몫도 고려해 3개까지만.
+    // 개수 표시도 이 목록을 따른다. 반경 안의 전체 수를 쓰면 화면에 3개가 보이는데
+    // 5라고 적혀 어디에 둘이 더 있는지 찾게 된다.
+    val shown = stations.take(3)
+
+    SectionCard(
+        title = "내 주변 역",
+        count = shown.size.takeIf { it > 0 },
+        actionLabel = "지도 ›",
+        onAction = onMapClick
     ) {
-        HomeTab.entries.forEach { tab ->
-            val isSelected = selectedTab == tab
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onTabSelected(tab) }
-                    .padding(vertical = 14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = tab.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) SkyBlue400 else TextOnDark.copy(alpha = 0.4f)
-                )
-            }
-        }
-    }
-
-    // 탭 하단 선택 인디케이터 – 선택된 탭 쪽으로 정렬만 바꿔 표현
-    Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Navy700)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.5f)
-                .fillMaxHeight()
-                .background(SkyBlue400)
-                .align(if (selectedTab == HomeTab.FAVORITE) Alignment.CenterStart else Alignment.CenterEnd)
-        )
-    }
-}
-
-// ── 즐겨찾기 탭 ──────────────────────────────────────────────────
-@Composable
-fun FavoriteTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit) {
-    val favorites by viewModel.favoriteStationList.collectAsState()
-    val arrivalMap by viewModel.realtimeArrivalInfo.collectAsState()
-    val loadingStates by viewModel.loadingStates.collectAsState()
-    val context = LocalContext.current
-
-    var currentTime by remember { mutableStateOf(LocalTime.now()) }
-    val formatter = DateTimeFormatter.ofPattern("a h:mm")
-    var rotation by remember { mutableStateOf(0f) }
-    val animRotation by animateFloatAsState(rotation, tween(500), label = "r")
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            // 섹션 헤더 (갱신 시각 + 리프레시)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "실시간 도착 정보",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Row(
-                    modifier = Modifier.clickable {
-                        currentTime = LocalTime.now()
-                        viewModel.loadRealtimeArrival()
-                        rotation += 360f
-                    },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(currentTime.format(formatter), style = MaterialTheme.typography.labelMedium, color = TextHint)
-                    Icon(
-                        Icons.Default.Refresh, contentDescription = "새로고침", tint = TextHint,
-                        modifier = Modifier.size(14.dp).graphicsLayer(rotationZ = animRotation)
-                    )
-                }
-            }
-        }
-
-        if (favorites.isEmpty()) {
-            item { EmptyFavoriteView() }
+        if (shown.isEmpty()) {
+            EmptyRow("주변에 표시할 역이 없습니다")
         } else {
-            items(favorites) { station ->
-                val isLoading = loadingStates[station.stationName] ?: true
-                val lineId = SubwayLine.getLineId(station.lineNumber)
-                val arrivals = arrivalMap[station.stationName] ?: emptyList()
-                val up = arrivals.filter { it.subwayId == lineId && it.updnLine == "상행" }
-                    .distinctBy { it.bstatnNm }.take(2)
-                val dn = arrivals.filter { it.subwayId == lineId && it.updnLine != "상행" }
-                    .distinctBy { it.bstatnNm }.take(2)
-                FavoriteArrivalRow(
+            shown.forEachIndexed { index, station ->
+                if (index > 0) {
+                    HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                NearbyStationRow(
                     station = station,
-                    upArrivals = up,
-                    dnArrivals = dn,
-                    isLoading = isLoading,
+                    // 도착 정보는 가장 가까운 역에만 붙인다. 목록 전체에 붙이면
+                    // 역 수만큼 실시간 API를 부르게 되고 일일 제한을 넘긴다.
+                    // 방향은 가리지 않는다. 즐겨찾기가 아니라 "근처에 뭐가 있나"를
+                    // 보는 자리라 어느 쪽이든 가장 빨리 오는 한 대면 된다.
+                    arrival = if (index == 0) {
+                        nearestArrivals
+                            .forDisplay(SubwayLine.getLineId(station.lineNumber)) { true }
+                            .firstOrNull()
+                    } else null,
                     onClick = { onStationClick(station.stationName, station.lineNumber) }
                 )
             }
         }
-
-        // KTX 배너 → 하단에 subtle 삽입 (흐름 방해 X)
-        item {
-            Spacer(Modifier.height(8.dp))
-            KtxBannerMinimal(context)
-        }
     }
 }
 
-// ── 리스트형 즐겨찾기 카드 (가로스크롤 → 세로 리스트로 전환) ────
 @Composable
-fun FavoriteArrivalRow(
-    station: BasicStationInfo,
-    upArrivals: List<RealtimeArrival>,
-    dnArrivals: List<RealtimeArrival>,
-    isLoading: Boolean,
+private fun NearbyStationRow(
+    station: NearbyStation,
+    arrival: RealtimeArrival?,
     onClick: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        shadowElevation = 3.dp,
-        color = SurfaceWhite
+    StationRow(
+        lineNumber = station.lineNumber,
+        stationName = station.stationName,
+        onClick = onClick
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // 역명 + 호선 뱃지
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = station.stationName,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    val lineColor = getSubwayLineColor(station.lineNumber)
-                    Surface(shape = RoundedCornerShape(6.dp), color = lineColor) {
-                        Text(
-                            text = station.lineNumber.removePrefix("0"),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-                Text("›", style = MaterialTheme.typography.titleMedium, color = TextHint)
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            if (isLoading) {
-                // 스켈레톤
-                repeat(3) { i ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(if (i == 1) 0.6f else 1f)
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(DividerColor)
-                    )
-                    if (i < 2) Spacer(Modifier.height(8.dp))
-                }
-            } else {
-                // 상행 / 하행 가로 2열 배치
-                val upDest = upArrivals.firstOrNull()?.bstatnNm ?: "-"
-                val dnDest = dnArrivals.firstOrNull()?.bstatnNm ?: "-"
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ArrivalColumn(
-                        modifier = Modifier.weight(1f),
-                        direction = "↑ $upDest",
-                        arrivals = upArrivals
-                    )
-                    Box(modifier = Modifier.width(1.dp).height(60.dp).background(DividerColor))
-                    ArrivalColumn(
-                        modifier = Modifier.weight(1f),
-                        direction = "↓ $dnDest",
-                        arrivals = dnArrivals
-                    )
-                }
-            }
-        }
+        // 도착 정보가 없는 역(2·3번째)은 거리만. 실시간 API를 최근접 한 곳에만
+        // 부르기 때문이지, 그 역에 열차가 없다는 뜻이 아니다.
+        DetailRow(
+            label = station.walkingLabel(),
+            arrival = arrival,
+            emptyPlaceholder = null,
+            trailingLabel = arrival?.let { "${it.bstatnNm}행" }
+        )
     }
 }
 
+/** "250m · 도보 4분". 도보 속도는 분당 67m로 잡는다 */
+private fun NearbyStation.walkingLabel(): String {
+    val meters = (distance * 1000).toInt()
+    val minutes = maxOf(1, Math.round(meters / 67.0).toInt())
+    val distanceText = if (meters >= 1000) String.format("%.1fkm", meters / 1000.0) else "${meters}m"
+    return "$distanceText · 도보 ${minutes}분"
+}
+
+// ── 즐겨찾기 ─────────────────────────────────────────────────────
 @Composable
-fun ArrivalColumn(modifier: Modifier, direction: String, arrivals: List<RealtimeArrival>) {
-    Column(modifier = modifier) {
-        Text(
-            text = direction,
-            style = MaterialTheme.typography.labelSmall,
-            color = TextHint,
-            maxLines = 1,
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
-        arrivals.take(2).forEach { a ->
-            Text(
-                text = a.getFormattedMessage(),
-                style = MaterialTheme.typography.bodySmall,
-                color = ArrivalRed,
-                fontWeight = FontWeight.SemiBold
+private fun FavoriteSection(
+    favorites: List<FavoriteStation>,
+    arrivalMap: Map<String, List<RealtimeArrival>>,
+    updatedAt: LocalTime?,
+    onRefresh: () -> Unit,
+    onStationClick: (String, String) -> Unit
+) {
+    SectionCard(
+        title = "즐겨찾기",
+        count = favorites.size.takeIf { it > 0 },
+        updatedAt = updatedAt,
+        onRefresh = onRefresh
+    ) {
+        if (favorites.isEmpty()) {
+            EmptyRow("역 상세에서 별을 눌러 추가하세요")
+            return@SectionCard
+        }
+        favorites.forEachIndexed { index, favorite ->
+            if (index > 0) {
+                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+            }
+            FavoriteRow(
+                favorite = favorite,
+                arrivals = arrivalMap.directionalArrivals(favorite),
+                onClick = { onStationClick(favorite.stationName, favorite.lineNumber) }
             )
         }
-        if (arrivals.isEmpty()) {
-            Text("정보없음", style = MaterialTheme.typography.bodySmall, color = TextHint)
-        }
     }
 }
 
 @Composable
-fun EmptyFavoriteView() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp),
-        contentAlignment = Alignment.Center
+private fun FavoriteRow(
+    favorite: FavoriteStation,
+    arrivals: List<Pair<String, RealtimeArrival?>>,
+    onClick: () -> Unit
+) {
+    StationRow(
+        lineNumber = favorite.lineNumber,
+        stationName = favorite.stationName,
+        onClick = onClick
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.LocationOn, contentDescription = null, tint = TextHint, modifier = Modifier.size(36.dp))
-            Spacer(Modifier.height(10.dp))
-            Text("즐겨찾기를 추가해보세요", style = MaterialTheme.typography.bodyMedium, color = TextHint)
-            Spacer(Modifier.height(4.dp))
-            Text("역 상세에서 ★을 눌러 추가할 수 있어요", style = MaterialTheme.typography.bodySmall, color = TextHint)
+        // 그 방향에 열차가 없어도 줄을 지우지 않는다.
+        // 한 줄만 남으면 그 역에 방향이 하나뿐인 것처럼 보인다.
+        arrivals.forEach { (direction, arrival) ->
+            DetailRow(
+                label = if (arrival != null) "$direction · ${arrival.bstatnNm}행" else direction,
+                arrival = arrival
+            )
         }
     }
 }
 
-// ── KTX 배너 (최소화) ─────────────────────────────────────────────
+// ── 공통 행 ──────────────────────────────────────────────────────
+/**
+ * 홈 리스트의 한 행.
+ *
+ * 예전에는 역명이 왼쪽 끝, 정보가 오른쪽 끝에 몰려 가운데가 비고 오른쪽만
+ * 글자가 뭉쳤다. 역명을 첫 줄에 단독으로 두고 상세를 아래 줄로 내린다.
+ * 시선이 좌우로 튀지 않고 위에서 아래로 흐른다.
+ *
+ * 왼쪽 세로 바가 노선색을 담당하므로 아이콘은 20dp로 줄여도 된다.
+ */
 @Composable
-fun KtxBannerMinimal(context: Context) {
-    Box(
+private fun StationRow(
+    lineNumber: String,
+    stationName: String,
+    onClick: () -> Unit,
+    details: @Composable ColumnScope.() -> Unit
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Navy900.copy(alpha = 0.07f))
-            .clickable {
-                val intent = android.content.Intent(
-                    android.content.Intent.ACTION_VIEW,
-                    Uri.parse("https://www.letskorail.com/")
+            .height(IntrinsicSize.Min)
+            .clickable { onClick() }
+    ) {
+        // 행 전체 높이를 채우는 노선색 바
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .fillMaxHeight()
+                .background(getSubwayLineColor(lineNumber))
+        )
+        Column(modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SubwayLineIcon(lineName = lineNumber, size = 20.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stationName,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                context.startActivity(intent)
             }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            Spacer(Modifier.height(3.dp))
+            details()
+        }
+    }
+}
+
+/**
+ * 역명 아래 한 줄. 왼쪽 라벨, 오른쪽 도착 시간.
+ *
+ * [emptyPlaceholder]가 null이면 도착 정보가 없을 때 오른쪽을 비운다.
+ * 즐겨찾기는 "정보 없음"을 띄워 그 방향이 있다는 것을 알리지만,
+ * 주변 역은 애초에 호출하지 않은 것이라 빈칸이 맞다.
+ */
+@Composable
+private fun DetailRow(
+    label: String,
+    arrival: RealtimeArrival?,
+    emptyPlaceholder: String? = "정보 없음",
+    trailingLabel: String? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // 방향 줄이 둘이라 여백이 두 배로 쌓인다. 1dp만 줘도 행이 88dp를 넘겼다
+            .padding(vertical = 1.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        // 시간 바로 앞자리는 "어느 열차인지"로 통일한다.
+        // 즐겨찾기는 "상행 · 청량리행"이 왼쪽에 있지만, 주변 역은 왼쪽이 거리라
+        // 성격이 다른 값이 한 구분자로 이어지지 않도록 행선지를 이쪽으로 옮겼다.
+        if (trailingLabel != null) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = trailingLabel,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        if (arrival != null) {
+            ArrivalTime(arrival = arrival)
+        } else if (emptyPlaceholder != null) {
+            Text(
+                text = emptyPlaceholder,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.tertiary
+            )
+        }
+    }
+}
+
+// ── 공통 ─────────────────────────────────────────────────────────
+/** 섹션 제목 + 흰 카드. 카드 안 내용은 호출부가 채운다 */
+@Composable
+private fun SectionCard(
+    title: String,
+    count: Int? = null,
+    updatedAt: LocalTime? = null,
+    onRefresh: (() -> Unit)? = null,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 12.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("🚄  기차 / KTX 승차권 예매", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-            Text("바로가기 →", style = MaterialTheme.typography.labelSmall, color = SkyBlue400)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    letterSpacing = 0.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium
+            )
+            if (count != null) {
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 11.sp,
+                        fontFeatureSettings = "tnum"
+                    ),
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            if (updatedAt != null) {
+                // 요청 시각이 아니라 응답이 실제로 들어온 시각이다(MainViewModel 참고)
+                Text(
+                    text = "%02d:%02d 기준".format(updatedAt.hour, updatedAt.minute),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        fontFeatureSettings = "tnum"
+                    ),
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
+            if (onRefresh != null) {
+                IconButton(onClick = onRefresh, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "새로고침",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            if (actionLabel != null && onAction != null) {
+                Text(
+                    text = actionLabel,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { onAction() }
+                        .padding(horizontal = 4.dp, vertical = 6.dp)
+                )
+            }
+        }
+        // 테두리는 클립 바깥에 둔다. 안쪽 Column이 자식을 모서리로 잘라내므로
+        // 첫 행·마지막 행의 호선색 세로 바가 둥근 모서리를 뚫고 나오지 않는다.
+        val shape = RoundedCornerShape(14.dp)
+        Box(modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, shape)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surface),
+                content = content
+            )
         }
     }
 }
 
-// ── 근처 역 탭 ───────────────────────────────────────────────────
 @Composable
-fun NearbyTab(viewModel: MainViewModel, onStationClick: (String, String) -> Unit) {
-    val context = LocalContext.current
-    val nearbyStations by viewModel.nearbyStationList.collectAsState()
+private fun EmptyRow(message: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.tertiary
+        )
+    }
+}
 
-    val isPermissionGranted = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    val isGpsOn = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+/**
+ * 도착 시간.
+ *
+ * 수치("3분")와 상태("도착", "곧 도착", "진입")는 성격이 달라 표현도 나눈다.
+ * 예전에는 둘 다 같은 크기의 빨간 굵은 글씨라, 한 행에 겹치면 붉은 덩어리로
+ * 보이고 정작 숫자가 묻혔다. 상태는 칩으로 내려 빨강 면적을 줄인다.
+ *
+ * 숫자는 tabular figures로 고정폭을 줘 세로로 자릿수가 흔들리지 않게 한다.
+ */
+@Composable
+private fun ArrivalTime(arrival: RealtimeArrival) {
+    val message = arrival.getFormattedMessage()
+    val minutes = Regex("(\\d+)분").find(message)?.groupValues?.get(1)
 
-    if (!isPermissionGranted || !isGpsOn) {
-        LocationGuideCard(isPermissionGranted)
+    if (minutes == null) {
+        StatusChip(message)
         return
     }
 
-    val cameraPositionState = rememberCameraPositionState()
-    var selectedStation by remember { mutableStateOf<NearbyStation?>(null) }
-    var mapInitialized by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-
-    // Map initial center logic
-    LaunchedEffect(nearbyStations) {
-        if (!mapInitialized && nearbyStations.isNotEmpty()) {
-            val fusedClient = LocationServices.getFusedLocationProviderClient(context)
-            try {
-                fusedClient.lastLocation.addOnSuccessListener { loc ->
-                    loc?.let {
-                        val latLng = LatLng(it.latitude, it.longitude)
-                        cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(latLng, 14f))
-                        mapInitialized = true
-                    } ?: run {
-                        // Fallback: Default to first station if lastLocation is null
-                        val firstLoc = LatLng(nearbyStations.first().latitude, nearbyStations.first().longitude)
-                        cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(firstLoc, 14f))
-                        mapInitialized = true
-                    }
-                }
-            } catch (e: SecurityException) { }
-        }
+    val color = when (arrival.emphasis()) {
+        ArrivalEmphasis.URGENT -> MaterialTheme.colorScheme.error
+        ArrivalEmphasis.NORMAL -> MaterialTheme.colorScheme.onSurface
+        ArrivalEmphasis.DISTANT -> MaterialTheme.colorScheme.onSurfaceVariant
+        ArrivalEmphasis.INACTIVE -> MaterialTheme.colorScheme.tertiary
     }
 
-    val groupedStations = remember(nearbyStations) {
-        nearbyStations.groupBy { it.latitude to it.longitude }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = true),
-            uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = true)
-        ) {
-            groupedStations.forEach { (coords, stationsAtPos) ->
-                val pos = LatLng(coords.first, coords.second)
-                val lineColors = stationsAtPos.map { getSubwayLineColor(it.lineNumber) }
-                val isAnySelected = stationsAtPos.any { it.stationName == selectedStation?.stationName && it.lineNumber == selectedStation?.lineNumber }
-
-                MarkerComposable(
-                    state = MarkerState(position = pos),
-                    onClick = {
-                        selectedStation = stationsAtPos.first()
-                        coroutineScope.launch {
-                            cameraPositionState.animate(CameraUpdateFactory.newLatLng(pos))
-                        }
-                        true
-                    }
-                ) {
-                    StationMarkerIcon(
-                        lineColors = lineColors,
-                        isSelected = isAnySelected,
-                        stationName = stationsAtPos.first().stationName
-                    )
-                }
-            }
-        }
-
-        // Top horizontal chips
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(nearbyStations) { station ->
-                val isSelected = selectedStation?.stationName == station.stationName && selectedStation?.lineNumber == station.lineNumber
-                val lineColor = getSubwayLineColor(station.lineNumber)
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) lineColor else SurfaceWhite,
-                    border = BorderStroke(1.dp, lineColor),
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.clickable {
-                        selectedStation = station
-                        coroutineScope.launch {
-                            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(LatLng(station.latitude, station.longitude), 15f))
-                        }
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(androidx.compose.foundation.shape.CircleShape)
-                                .background(if (isSelected) SurfaceWhite else lineColor)
-                        )
-                        Text(
-                            text = "${station.stationName} ${station.lineNumber}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (isSelected) SurfaceWhite else TextPrimary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
-        }
-
-        // Bottom Card for selected station
-        androidx.compose.animation.AnimatedVisibility(
-            visible = selectedStation != null,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(16.dp)
-                .padding(bottom = 24.dp), // Extra padding for Map watermark
-            enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }),
-            exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
-        ) {
-            selectedStation?.let { station ->
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onStationClick(station.stationName, station.lineNumber) },
-                    shape = RoundedCornerShape(16.dp),
-                    shadowElevation = 8.dp,
-                    color = SurfaceWhite
-                ) {
-                    val lineColor = getSubwayLineColor(station.lineNumber)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(lineColor.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = lineColor)
-                            }
-                            Column {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Text(
-                                        text = station.stationName,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Surface(shape = RoundedCornerShape(6.dp), color = lineColor) {
-                                        Text(
-                                            text = station.lineNumber,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = String.format("내 위치에서 %.1f km", station.distance),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Navy900
-                        ) {
-                            Text(
-                                text = "상세 정보",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(
+            text = minutes,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = 18.sp,
+                letterSpacing = (-0.6).sp,
+                fontFeatureSettings = "tnum"
+            ),
+            color = color,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = "분",
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            color = color,
+            modifier = Modifier.padding(bottom = 2.dp, start = 1.dp)
+        )
     }
 }
 
+/** "도착"·"진입"·"곧 도착" 같은 상태 표현 */
 @Composable
-fun StationMarkerIcon(lineColors: List<Color>, isSelected: Boolean, stationName: String? = null) {
-    val baseSize = if (isSelected) 42.dp else 34.dp
-    val strokeWidth = if (isSelected) 4.dp else 3.dp
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(baseSize)
-                .shadow(if (isSelected) 8.dp else 4.dp, androidx.compose.foundation.shape.CircleShape)
-                .background(Color.White, androidx.compose.foundation.shape.CircleShape)
-                .padding(strokeWidth / 2), // Space for stroke
-            contentAlignment = Alignment.Center
-        ) {
-            androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                if (lineColors.size == 1) {
-                    drawCircle(
-                        color = lineColors[0],
-                        style = Stroke(width = strokeWidth.toPx())
-                    )
-                } else {
-                    val sweepAngle = 360f / lineColors.size
-                    lineColors.forEachIndexed { index, color ->
-                        drawArc(
-                            color = color,
-                            startAngle = index * sweepAngle,
-                            sweepAngle = sweepAngle,
-                            useCenter = false,
-                            style = Stroke(width = strokeWidth.toPx())
-                        )
-                    }
-                }
-            }
-            
-            if (lineColors.size > 1) {
-                Icon(
-                    imageVector = Icons.Default.SyncAlt,
-                    contentDescription = null,
-                    modifier = Modifier.size(baseSize * 0.5f),
-                    tint = Navy900
-                )
-            } else {
-                // Single line icon or dot
-                Box(
-                    modifier = Modifier
-                        .size(baseSize * 0.3f)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(lineColors.firstOrNull() ?: SkyBlue400)
-                )
-            }
-        }
-
-        if (stationName != null) {
-            val borderStroke = if (lineColors.size == 1) {
-                BorderStroke(1.dp, lineColors.first())
-            } else {
-                // 여러 노선일 경우 선형 그라데이션으로 섞어서 표현
-                BorderStroke(1.dp, Brush.linearGradient(lineColors))
-            }
-
-            Surface(
-                shape = RoundedCornerShape(4.dp),
-                color = SurfaceWhite.copy(alpha = 0.9f),
-                border = borderStroke,
-                shadowElevation = 2.dp
-            ) {
-                Text(
-                    text = stationName,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun LocationGuideCard(isPermissionGranted: Boolean) {
-    val context = LocalContext.current
+private fun StatusChip(text: String) {
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = Modifier
+            .clip(RoundedCornerShape(9.dp))
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(horizontal = 7.dp, vertical = 2.dp)
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .clickable {
-                    val intent = if (!isPermissionGranted) {
-                        android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.parse("package:${context.packageName}")
-                        }
-                    } else {
-                        android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                    }
-                    context.startActivity(intent)
-                },
-            shape = RoundedCornerShape(16.dp),
-            shadowElevation = 4.dp,
-            color = SurfaceWhite
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = SkyBlue400, modifier = Modifier.size(36.dp))
-                Text(
-                    text = if (!isPermissionGranted) "위치 권한 필요" else "GPS를 켜주세요",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = if (!isPermissionGranted) "근처 역을 보려면 위치 권한을 허용해 주세요"
-                           else "GPS를 활성화하면 주변 역 정보를 확인할 수 있어요",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = SkyBlue400
-                ) {
-                    Text(
-                        text = "설정으로 이동",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
-            }
-        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * 이 역의 방향별 다음 열차 한 대씩.
+ *
+ * 즐겨찾기가 역 단위가 되면서 한 항목이 두 방향을 함께 보여준다.
+ * 방향마다 가장 빠른 한 대만 남긴다 — 카드가 두 줄을 넘기면
+ * 캐러셀 높이가 역마다 달라진다.
+ *
+ * 반환 순서는 [directionPairFor]가 주는 순서(상행→하행 / 내선→외선)를 따른다.
+ * 도착 시각순으로 정렬하면 갱신할 때마다 두 줄이 자리를 바꿔 읽기 어렵다.
+ */
+private fun Map<String, List<RealtimeArrival>>.directionalArrivals(
+    favorite: FavoriteStation
+): List<Pair<String, RealtimeArrival?>> {
+    val lineId = SubwayLine.getLineId(favorite.lineNumber)
+    val all = this[favorite.stationName] ?: emptyList()
+
+    val (first, second) = directionPairFor(favorite.lineNumber)
+    // 열차가 없는 방향도 자리를 남긴다. 화면이 방향 라벨과 "정보 없음"을 그린다.
+    return listOf(first, second).map { direction ->
+        // 거르기와 정렬은 역 상세·위젯과 같은 규칙을 쓴다(ArrivalOrdering).
+        // 정렬하지 않으면 API가 급행 계통을 끼워 넣어 가장 빠른 열차가 첫 줄에 오지 않는다.
+        direction to all.forDisplay(lineId) { it.matchesDirection(direction) }.firstOrNull()
     }
 }

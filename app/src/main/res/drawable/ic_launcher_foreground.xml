@@ -1,30 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    런처 아이콘 전경.
+
+    Material Symbols Rounded "directions_subway" (Filled, weight 400, optical size 48).
+    Google, Apache License 2.0. path 데이터는 원본 그대로이며 다시 그리지 않았다.
+
+    원본 좌표계는 960 그리드에 viewBox "0 -960 960 960"이라 y가 음수다.
+    group의 scale·translate로 108dp 캔버스 중앙에 얹는다.
+      s  = 40 / 760          글리프 실제 높이 760단위를 40dp로
+      tx = 54 - 480 * s      글리프 bbox 중심 x(480)를 캔버스 중심 54로
+      ty = 54 + 500 * s      글리프 bbox 중심 y(-500)를 캔버스 중심 54로
+    결과: 세로 34~74dp, 가로 37.2~70.8dp (타일 대비 폭 31%).
+
+    56dp로 시작해 48dp를 거쳐 40dp로 내렸다. 화면에서 글리프가 타일을 채워
+    답답했고, 주변 앱 아이콘들이 더 넉넉한 여백을 두고 있었다.
+    48/44/40/36dp를 앱 서랍 실제 크기(118px)로 렌더해 비교했다.
+    가장 먼 점(좌우 하단 다리 끝)이 24.3dp로 안전 영역 33dp에 여유가 크다.
+
+    후보 넷(subway, directions_subway, train, tram)을 48px로 렌더해 비교했다.
+    subway는 아치 안의 열차가 뭉개지고 tram은 상단 폴이 사라진다.
+    directions_subway는 창 두 칸과 점 두 개가 48px에서도 분리되어 보인다.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:pathData="M31,63.928c0,0 6.4,-11 12.1,-13.1c7.2,-2.6 26,-1.4 26,-1.4l38.1,38.1L107,108.928l-32,-1L31,63.928z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:endX="85.84757"
-                android:endY="92.4963"
-                android:startX="42.9492"
-                android:startY="49.59793"
-                android:type="linear">
-                <item
-                    android:color="#44000000"
-                    android:offset="0.0" />
-                <item
-                    android:color="#00000000"
-                    android:offset="1.0" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillType="nonZero"
-        android:pathData="M65.3,45.828l3.8,-6.6c0.2,-0.4 0.1,-0.9 -0.3,-1.1c-0.4,-0.2 -0.9,-0.1 -1.1,0.3l-3.9,6.7c-6.3,-2.8 -13.4,-2.8 -19.7,0l-3.9,-6.7c-0.2,-0.4 -0.7,-0.5 -1.1,-0.3C38.8,38.328 38.7,38.828 38.9,39.228l3.8,6.6C36.2,49.428 31.7,56.028 31,63.928h46C76.3,56.028 71.8,49.428 65.3,45.828zM43.4,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2c-0.3,-0.7 -0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C45.3,56.528 44.5,57.328 43.4,57.328L43.4,57.328zM64.6,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2s-0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C66.5,56.528 65.6,57.328 64.6,57.328L64.6,57.328z"
-        android:strokeWidth="1"
-        android:strokeColor="#00000000" />
+    <group
+        android:scaleX="0.05263158"
+        android:scaleY="0.05263158"
+        android:translateX="28.736842"
+        android:translateY="80.315789">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M300-200q-59 0-99.5-40.5T160-340v-380q0-83 77-121.5T480-880q172 0 246 37t74 123v380q0 59-40.5 99.5T660-200l79 53q9 6 5.5 16.5T730-120H230q-11 0-14.5-10.5T221-147l79-53Zm-80-345h234v-155H220v155Zm294 0h226v-155H514v155ZM335.06-315Q358-315 374-331.06q16-16.06 16-39T373.94-409q-16.06-16-39-16T296-408.94q-16 16.06-16 39T296.06-331q16.06 16 39 16Zm290 0Q648-315 664-331.06q16-16.06 16-39T663.94-409q-16.06-16-39-16T586-408.94q-16 16.06-16 39T586.06-331q16.06 16 39 16Z" />
+    </group>
 </vector>

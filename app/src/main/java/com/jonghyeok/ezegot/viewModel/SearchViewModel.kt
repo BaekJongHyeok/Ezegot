@@ -37,6 +37,16 @@ class SearchViewModel @Inject constructor(
     private val _filteredStations = MutableStateFlow<List<StationInfo>>(emptyList())
     val filteredStations: StateFlow<List<StationInfo>> = _filteredStations.asStateFlow()
 
+    /**
+     * 마지막으로 filter가 실제 실행된 검색어.
+     *
+     * debounce(200ms) 때문에 입력 직후에는 [filteredStations]가 아직 이전 상태다.
+     * 이때의 0건은 "결과 없음"이 아니라 "아직 안 돌았음"이므로,
+     * 화면이 둘을 구분해 빈 상태를 띄우도록 이 값을 함께 노출한다.
+     */
+    private val _lastFilteredQuery = MutableStateFlow<String?>(null)
+    val lastFilteredQuery: StateFlow<String?> = _lastFilteredQuery.asStateFlow()
+
     // ── 내부 검색어 String Flow (debounce 적용) ───────────────────
     /**
      * 사용자가 빠르게 타이핑할 때 매 글자마다 filter를 실행하는 것을 방지한다.
@@ -77,6 +87,7 @@ class SearchViewModel @Inject constructor(
     private fun runFilter(query: String) {
         _filteredStations.value = if (query.isBlank()) emptyList()
         else allStationsInfoList.value.filter { it.stationName.contains(query, ignoreCase = true) }
+        _lastFilteredQuery.value = query
     }
 
     fun saveRecentSearch(stationName: String, lineNumber: String) {

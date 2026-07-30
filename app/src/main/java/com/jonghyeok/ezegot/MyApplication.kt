@@ -1,7 +1,6 @@
 package com.jonghyeok.ezegot
 
 import android.app.Application
-import android.content.Context
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
@@ -17,13 +16,4 @@ class MyApplication : Application(), Configuration.Provider {
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
-
-    companion object {
-        lateinit var context: Context
-    }
-
-    override fun onCreate() {
-        super.onCreate()
-        context = applicationContext
-    }
 }

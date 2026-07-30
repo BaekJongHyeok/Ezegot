@@ -62,6 +62,11 @@ data class RealtimeArrival(
     // 막차여부
     @field:Element(name = "lstcarAt", required = false)
     var lstcarAt: String = "",
+
+    // 이 행이 만들어진 시각 ("2026-07-29 18:53:21").
+    // 급행 계통이 일반보다 5분 가까이 뒤처져 오므로, 떠난 열차를 거르는 데 쓴다.
+    @field:Element(name = "recptnDt", required = false)
+    var receptionTime: String = "",
 ) {
     /**
      * 사용자 친화적인 실시간 도착 메시지 반환 함수.
@@ -80,8 +85,13 @@ data class RealtimeArrival(
             }
         }
 
-        // 2. barvlDt 정보가 없을 경우 기존 arvlMsg2(arrivalMessage1) 기반 문자열 정제 및 시간 추정
-        val rawMessage = arrivalMessage1.substringBefore("(").trim()
+        // 2. barvlDt가 없으면 arvlMsg2를 정제해 쓴다.
+        //
+        // 꼬리에 붙는 "(다음 역)"만 뗀다. substringBefore("(")를 쓰면
+        // "총신대입구(이수) 도착"처럼 역명에 괄호가 있는 역에서 역명이 잘려
+        // "총신대입구"만 남고, 어느 패턴에도 걸리지 않아 역명이 그대로 화면에 나왔다.
+        // greedy .* 라서 "6분 후 (상도(중앙대앞))" 같은 중첩 괄호도 통째로 걷힌다.
+        val rawMessage = arrivalMessage1.replace(TRAILING_PARENTHESES, "").trim()
         
         // "[N]번째 전역" 패턴(예: "[3]번째 전역") 처리 -> 정밀 시간 계산(ArrivalEstimator)
         val stationRegex = Regex("\\[(\\d+)]번째 전역")
@@ -93,8 +103,14 @@ data class RealtimeArrival(
             return "${estimatedMinutes}분 후"
         }
 
-        // 3. "전역" 이라는 텍스트가 단독으로 올 경우 (1정거장 전)
-        if (rawMessage == "전역") {
+        // 3. "전역"으로 시작하면 한 정거장 전이다 ("전역 도착", "전역 진입", "전역").
+        //
+        // 반드시 아래 endsWith 검사보다 먼저 와야 한다. "전역 도착"은 이전 역에
+        // 도착했다는 뜻인데 endsWith("도착")에 먼저 걸리면 현재 역 도착과 구분되지
+        // 않는다. 그러면 한 정거장(약 3분) 떨어진 열차를 "지금 들어온다"고 알리게 되고,
+        // 인접한 두 역에서 같은 열차의 표시가 뒤집혀 보인다.
+        // 수원·매교·수원시청 동시 수집 62건 중 12건(19%)이 이 경우였다.
+        if (rawMessage.startsWith("전역")) {
             val estimatedMinutes = ArrivalEstimator.estimateMinutesFromStations(this, 1)
             return "${estimatedMinutes}분 후"
         }
@@ -116,5 +132,10 @@ data class RealtimeArrival(
 
         // 일반 텍스트의 경우 불필요한 단어 제거 혹은 그대로 반환
         return rawMessage.ifEmpty { "정보 없음" }
+    }
+
+    private companion object {
+        /** 문자열 끝에 붙는 "(다음 역)". 중첩 괄호까지 한 번에 걷도록 greedy를 쓴다 */
+        val TRAILING_PARENTHESES = Regex("""\s*\(.*\)\s*$""")
     }
 }

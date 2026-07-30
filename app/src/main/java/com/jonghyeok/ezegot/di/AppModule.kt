@@ -6,6 +6,8 @@ import com.jonghyeok.ezegot.BuildConfig
 import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.db.AppDatabase
 import com.jonghyeok.ezegot.db.FavoriteStationDao
+import com.jonghyeok.ezegot.db.MIGRATION_2_3
+import com.jonghyeok.ezegot.db.MIGRATION_3_4
 import com.jonghyeok.ezegot.db.RecentSearchDao
 import com.jonghyeok.ezegot.db.SubwayAlarmDao
 import dagger.Module
@@ -129,6 +131,10 @@ object AppModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "ezegot_db")
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+            // fallback을 지우지 않는 이유: 정의된 마이그레이션이 없는 옛 버전(v1) 기기가
+            // 삭제 대신 크래시하게 된다. Room은 정의된 마이그레이션을 우선하므로
+            // 2→3은 데이터를 보존하고, v1은 기존과 동일하게 동작한다.
             .fallbackToDestructiveMigration()
             .build()
 
