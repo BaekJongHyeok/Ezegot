@@ -218,6 +218,23 @@ fun StationScreen(
             alarm.stationName == stationName && arrivals.any { it.trainNumber == alarm.trainNo }
         }
 
+    /**
+     * 종 아이콘을 누르면 켜고 끈다.
+     *
+     * 예전에는 상태와 관계없이 예약 다이얼로그만 띄웠다. 이미 켜진 종을 눌러도
+     * 같은 다이얼로그가 다시 떴고, scheduleAlarm이 기존 예약을 보고 그대로
+     * 돌아가 아무 일도 일어나지 않았다. 아이콘은 "알림 해제"라고 읽어주는데
+     * 해제할 방법이 역 상세에 없어 알림 탭까지 가야 했다.
+     */
+    fun toggleAlarm(arrivals: List<RealtimeArrival>) {
+        val active = activeAlarmFor(arrivals)
+        if (active != null) {
+            viewModel.cancelAlarm(active.trainNo, active.stationName)
+        } else {
+            requestAlarm(arrivals)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -247,14 +264,14 @@ fun StationScreen(
                 lineColor = lineColor,
                 arrivals = upArrivals,
                 isAlarmOn = activeAlarmFor(upArrivals) != null,
-                onAlarmClick = { requestAlarm(upArrivals) }
+                onAlarmClick = { toggleAlarm(upArrivals) }
             )
             ArrivalDirectionCard(
                 directionLabel = dnLabel,
                 lineColor = lineColor,
                 arrivals = dnArrivals,
                 isAlarmOn = activeAlarmFor(dnArrivals) != null,
-                onAlarmClick = { requestAlarm(dnArrivals) }
+                onAlarmClick = { toggleAlarm(dnArrivals) }
             )
 
             StationFirstLastSection(
