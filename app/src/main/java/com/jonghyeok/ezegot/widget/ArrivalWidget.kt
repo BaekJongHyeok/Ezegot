@@ -17,6 +17,8 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.action.clickable
+import androidx.glance.action.actionStartActivity
 import androidx.glance.background
 import androidx.glance.layout.*
 import androidx.glance.text.FontWeight
@@ -24,6 +26,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.jonghyeok.ezegot.SubwayLine
+import com.jonghyeok.ezegot.view.MainActivity
 import com.jonghyeok.ezegot.ui.screen.toLineIconLabel
 import com.jonghyeok.ezegot.ui.theme.onSubwayLineColor
 import com.jonghyeok.ezegot.util.ArrivalEmphasis
@@ -180,12 +183,23 @@ private val IconRing        = Color(0xFF8EB4D4)
 private val BrandAccent     = Color(0xFF4DD9F5)
 private val BrandSub        = Color(0xFF4A7291)
 
+/**
+ * 위젯을 누르면 앱이 열린다.
+ *
+ * 탭 대상은 위젯 전체 하나다. 역별 행에 따로 붙이면 "강남 행을 누르면 강남으로
+ * 간다"는 기대가 생기는데, 지금은 딥링크가 없어 어느 행을 눌러도 홈으로 간다.
+ * 기대를 만들어 놓고 어긋나는 것보다 위젯 전체가 하나의 대상인 편이 정직하다.
+ * 딥링크를 붙일 때 그때 행 단위로 쪼개는 것이 순서다.
+ */
+private fun openApp() = actionStartActivity<MainActivity>()
+
 @Composable
 private fun WidgetRootContent(entries: List<WidgetStationEntry>) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(BgWidget)
+            .clickable(openApp())
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Row(
