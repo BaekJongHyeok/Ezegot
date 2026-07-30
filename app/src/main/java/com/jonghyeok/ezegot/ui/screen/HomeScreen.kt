@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
@@ -47,9 +50,11 @@ import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.dto.directionPairFor
 import com.jonghyeok.ezegot.dto.matchesDirection
 import com.jonghyeok.ezegot.ui.theme.EzegotWordmark
+import com.jonghyeok.ezegot.ui.theme.getSubwayLineColor
 import com.jonghyeok.ezegot.util.ArrivalEmphasis
 import com.jonghyeok.ezegot.util.emphasis
 import com.jonghyeok.ezegot.viewModel.MainViewModel
+import java.time.LocalTime
 
 /**
  * 홈.
@@ -75,6 +80,7 @@ fun HomeScreen(
     val arrivalMap by viewModel.realtimeArrivalInfo.collectAsState()
     val nearbyStations by viewModel.nearbyStationList.collectAsState()
     val nearestArrivals by viewModel.nearestArrivals.collectAsState()
+    val lastUpdatedAt by viewModel.lastUpdatedAt.collectAsState()
 
     Column(
         modifier = Modifier
@@ -89,6 +95,8 @@ fun HomeScreen(
             FavoriteSection(
                 favorites = favorites,
                 arrivalMap = arrivalMap,
+                updatedAt = lastUpdatedAt,
+                onRefresh = { viewModel.loadRealtimeArrival() },
                 onStationClick = onStationClick
             )
 
@@ -154,16 +162,21 @@ private fun NearbySection(
     onMapClick: () -> Unit,
     onStationClick: (String, String) -> Unit
 ) {
+    // 반경을 좁혀도 도심에서는 후보가 많다. 화면 몫도 고려해 3개까지만.
+    // 개수 표시도 이 목록을 따른다. 반경 안의 전체 수를 쓰면 화면에 3개가 보이는데
+    // 5라고 적혀 어디에 둘이 더 있는지 찾게 된다.
+    val shown = stations.take(3)
+
     SectionCard(
         title = "내 주변 역",
+        count = shown.size.takeIf { it > 0 },
         actionLabel = "지도 ›",
         onAction = onMapClick
     ) {
-        if (stations.isEmpty()) {
+        if (shown.isEmpty()) {
             EmptyRow("주변에 표시할 역이 없습니다")
         } else {
-            // 반경을 좁혀도 도심에서는 후보가 많다. 화면 몫도 고려해 3개까지만
-            stations.take(3).forEachIndexed { index, station ->
+            shown.forEachIndexed { index, station ->
                 if (index > 0) {
                     HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
@@ -191,42 +204,22 @@ private fun NearbyStationRow(
     arrival: RealtimeArrival?,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 13.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically
+    StationRow(
+        lineNumber = station.lineNumber,
+        stationName = station.stationName,
+        onClick = onClick
     ) {
-        SubwayLineIcon(lineName = station.lineNumber)
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = station.stationName,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(1.dp))
-            Text(
-                text = station.walkingLabel(),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (arrival != null) {
-            Spacer(Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                ArrivalTime(arrival = arrival, fontSize = 15.sp)
-                Text(
-                    text = "${arrival.bstatnNm}행",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
-        }
+        // 도착 정보가 없는 역(2·3번째)은 거리만. 실시간 API를 최근접 한 곳에만
+        // 부르기 때문이지, 그 역에 열차가 없다는 뜻이 아니다.
+        DetailRow(
+            label = if (arrival != null) {
+                "${station.walkingLabel()} · ${arrival.bstatnNm}행"
+            } else {
+                station.walkingLabel()
+            },
+            arrival = arrival,
+            emptyPlaceholder = null
+        )
     }
 }
 
@@ -243,9 +236,16 @@ private fun NearbyStation.walkingLabel(): String {
 private fun FavoriteSection(
     favorites: List<FavoriteStation>,
     arrivalMap: Map<String, List<RealtimeArrival>>,
+    updatedAt: LocalTime?,
+    onRefresh: () -> Unit,
     onStationClick: (String, String) -> Unit
 ) {
-    SectionCard(title = "즐겨찾기") {
+    SectionCard(
+        title = "즐겨찾기",
+        count = favorites.size.takeIf { it > 0 },
+        updatedAt = updatedAt,
+        onRefresh = onRefresh
+    ) {
         if (favorites.isEmpty()) {
             EmptyRow("역 상세에서 별을 눌러 추가하세요")
             return@SectionCard
@@ -269,52 +269,108 @@ private fun FavoriteRow(
     arrivals: List<Pair<String, RealtimeArrival?>>,
     onClick: () -> Unit
 ) {
+    StationRow(
+        lineNumber = favorite.lineNumber,
+        stationName = favorite.stationName,
+        onClick = onClick
+    ) {
+        // 그 방향에 열차가 없어도 줄을 지우지 않는다.
+        // 한 줄만 남으면 그 역에 방향이 하나뿐인 것처럼 보인다.
+        arrivals.forEach { (direction, arrival) ->
+            DetailRow(
+                label = if (arrival != null) "$direction · ${arrival.bstatnNm}행" else direction,
+                arrival = arrival
+            )
+        }
+    }
+}
+
+// ── 공통 행 ──────────────────────────────────────────────────────
+/**
+ * 홈 리스트의 한 행.
+ *
+ * 예전에는 역명이 왼쪽 끝, 정보가 오른쪽 끝에 몰려 가운데가 비고 오른쪽만
+ * 글자가 뭉쳤다. 역명을 첫 줄에 단독으로 두고 상세를 아래 줄로 내린다.
+ * 시선이 좌우로 튀지 않고 위에서 아래로 흐른다.
+ *
+ * 왼쪽 세로 바가 노선색을 담당하므로 아이콘은 20dp로 줄여도 된다.
+ */
+@Composable
+private fun StationRow(
+    lineNumber: String,
+    stationName: String,
+    onClick: () -> Unit,
+    details: @Composable ColumnScope.() -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(IntrinsicSize.Min)
             .clickable { onClick() }
-            .padding(horizontal = 13.dp, vertical = 11.dp),
+    ) {
+        // 행 전체 높이를 채우는 노선색 바
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .fillMaxHeight()
+                .background(getSubwayLineColor(lineNumber))
+        )
+        Column(modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SubwayLineIcon(lineName = lineNumber, size = 20.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stationName,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(Modifier.height(3.dp))
+            details()
+        }
+    }
+}
+
+/**
+ * 역명 아래 한 줄. 왼쪽 라벨, 오른쪽 도착 시간.
+ *
+ * [emptyPlaceholder]가 null이면 도착 정보가 없을 때 오른쪽을 비운다.
+ * 즐겨찾기는 "정보 없음"을 띄워 그 방향이 있다는 것을 알리지만,
+ * 주변 역은 애초에 호출하지 않은 것이라 빈칸이 맞다.
+ */
+@Composable
+private fun DetailRow(
+    label: String,
+    arrival: RealtimeArrival?,
+    emptyPlaceholder: String? = "정보 없음"
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // 방향 줄이 둘이라 여백이 두 배로 쌓인다. 1dp만 줘도 행이 88dp를 넘겼다
+            .padding(vertical = 1.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SubwayLineIcon(lineName = favorite.lineNumber)
-        Spacer(Modifier.width(10.dp))
         Text(
-            text = favorite.stationName,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-            color = MaterialTheme.colorScheme.onSurface,
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
         Spacer(Modifier.width(8.dp))
-        run {
-            // 역 단위라 한 행이 두 방향을 함께 보여준다.
-            // 방향 라벨은 왼쪽, 시간은 오른쪽으로 맞춰 두 줄의 열이 흔들리지 않게 한다.
-            Column(horizontalAlignment = Alignment.End) {
-                arrivals.forEachIndexed { index, (direction, arrival) ->
-                    if (index > 0) Spacer(Modifier.height(3.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            // 그 방향에 열차가 없어도 줄을 지우지 않는다.
-                            // 한 줄만 남으면 그 역에 방향이 하나뿐인 것처럼 보인다.
-                            text = if (arrival != null) "$direction · ${arrival.bstatnNm}행" else direction,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        if (arrival != null) {
-                            ArrivalTime(arrival = arrival, fontSize = 18.sp)
-                        } else {
-                            Text(
-                                text = "정보 없음",
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                        }
-                    }
-                }
-            }
+        if (arrival != null) {
+            ArrivalTime(arrival = arrival)
+        } else if (emptyPlaceholder != null) {
+            Text(
+                text = emptyPlaceholder,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.tertiary
+            )
         }
     }
 }
@@ -324,6 +380,9 @@ private fun FavoriteRow(
 @Composable
 private fun SectionCard(
     title: String,
+    count: Int? = null,
+    updatedAt: LocalTime? = null,
+    onRefresh: (() -> Unit)? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
@@ -332,7 +391,7 @@ private fun SectionCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp),
+                .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -345,7 +404,39 @@ private fun SectionCard(
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium
             )
+            if (count != null) {
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 11.sp,
+                        fontFeatureSettings = "tnum"
+                    ),
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
             Spacer(Modifier.weight(1f))
+            if (updatedAt != null) {
+                // 요청 시각이 아니라 응답이 실제로 들어온 시각이다(MainViewModel 참고)
+                Text(
+                    text = "%02d:%02d 기준".format(updatedAt.hour, updatedAt.minute),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        fontFeatureSettings = "tnum"
+                    ),
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
+            if (onRefresh != null) {
+                IconButton(onClick = onRefresh, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "새로고침",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
             if (actionLabel != null && onAction != null) {
                 Text(
                     text = actionLabel,
@@ -354,7 +445,7 @@ private fun SectionCard(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .clickable { onAction() }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .padding(horizontal = 4.dp, vertical = 6.dp)
                 )
             }
         }
@@ -386,52 +477,66 @@ private fun EmptyRow(message: String) {
 }
 
 /**
- * 도착 시간. 숫자와 "분"을 분리해 단위를 작게 쓴다.
+ * 도착 시간.
+ *
+ * 수치("3분")와 상태("도착", "곧 도착", "진입")는 성격이 달라 표현도 나눈다.
+ * 예전에는 둘 다 같은 크기의 빨간 굵은 글씨라, 한 행에 겹치면 붉은 덩어리로
+ * 보이고 정작 숫자가 묻혔다. 상태는 칩으로 내려 빨강 면적을 줄인다.
+ *
  * 숫자는 tabular figures로 고정폭을 줘 세로로 자릿수가 흔들리지 않게 한다.
  */
 @Composable
-private fun ArrivalTime(
-    arrival: RealtimeArrival,
-    fontSize: androidx.compose.ui.unit.TextUnit
-) {
+private fun ArrivalTime(arrival: RealtimeArrival) {
     val message = arrival.getFormattedMessage()
-    val emphasis = arrival.emphasis()
-    val color = when (emphasis) {
+    val minutes = Regex("(\\d+)분").find(message)?.groupValues?.get(1)
+
+    if (minutes == null) {
+        StatusChip(message)
+        return
+    }
+
+    val color = when (arrival.emphasis()) {
         ArrivalEmphasis.URGENT -> MaterialTheme.colorScheme.error
         ArrivalEmphasis.NORMAL -> MaterialTheme.colorScheme.onSurface
         ArrivalEmphasis.DISTANT -> MaterialTheme.colorScheme.onSurfaceVariant
         ArrivalEmphasis.INACTIVE -> MaterialTheme.colorScheme.tertiary
     }
 
-    val minutes = Regex("(\\d+)분").find(message)?.groupValues?.get(1)
-
     Row(verticalAlignment = Alignment.Bottom) {
-        if (minutes != null) {
-            Text(
-                text = minutes,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontSize = fontSize,
-                    letterSpacing = (-0.8).sp,
-                    fontFeatureSettings = "tnum"
-                ),
-                color = color,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = "분",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                color = color,
-                modifier = Modifier.padding(bottom = 2.dp, start = 1.dp)
-            )
-        } else {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = color,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1
-            )
-        }
+        Text(
+            text = minutes,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = 18.sp,
+                letterSpacing = (-0.6).sp,
+                fontFeatureSettings = "tnum"
+            ),
+            color = color,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = "분",
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            color = color,
+            modifier = Modifier.padding(bottom = 2.dp, start = 1.dp)
+        )
+    }
+}
+
+/** "도착"·"진입"·"곧 도착" 같은 상태 표현 */
+@Composable
+private fun StatusChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(9.dp))
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(horizontal = 7.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            maxLines = 1
+        )
     }
 }
 
