@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    런처 아이콘 전경.
+    Android 13 테마 아이콘용 모노크롬 레이어. minSdk 33이라 전 기기가 지원한다.
 
-    세로 바 = 노선, 붉은 점 = 도착 임박 열차, 흐린 점 = 뒤따르는 열차.
-    앱 목록의 좌측 호선색 세로 바, 도착 임박 빨강과 같은 언어다.
-
-    세로 바는 폭 9에 모서리 반경 4.5라 양 끝이 완전한 반원이 된다(stadium).
-    벡터 드로어블에는 원 프리미티브가 없어 점은 호 두 개로 그린다.
+    시스템이 이 드로어블의 알파 채널만 읽어 사용자 테마 색으로 칠한다.
+    그래서 색은 검정 하나로 두되 alpha 차이는 전경과 똑같이 유지한다 —
+    붉은 점과 흐린 점의 위계가 단색으로 바뀌어도 남는다.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -14,9 +12,9 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 노선: x=36, y=26, w=9, h=56, r=4.5 -->
+    <!-- 노선 -->
     <path
-        android:fillColor="#FFFFFF"
+        android:fillColor="#000000"
         android:pathData="M40.5,26
                           A4.5,4.5 0 0 1 45,30.5
                           L45,77.5
@@ -25,24 +23,22 @@
                           L36,30.5
                           A4.5,4.5 0 0 1 40.5,26 Z" />
 
-    <!-- 도착 임박 열차: 중심 (66,38), 반지름 9 -->
+    <!-- 도착 임박 열차 (전경의 붉은 점과 같은 자리, 불투명) -->
     <path
-        android:fillColor="#FF5A52"
+        android:fillColor="#000000"
         android:pathData="M57,38
                           a9,9 0 1 0 18,0
                           a9,9 0 1 0 -18,0 Z" />
 
-    <!-- 뒤따르는 열차: 중심 (66,62), 반지름 5.5 -->
+    <!-- 뒤따르는 열차 -->
     <path
-        android:fillColor="#FFFFFF"
+        android:fillColor="#000000"
         android:fillAlpha="0.45"
         android:pathData="M60.5,62
                           a5.5,5.5 0 1 0 11,0
                           a5.5,5.5 0 1 0 -11,0 Z" />
-
-    <!-- 뒤따르는 열차: 중심 (66,79), 반지름 5.5 -->
     <path
-        android:fillColor="#FFFFFF"
+        android:fillColor="#000000"
         android:fillAlpha="0.45"
         android:pathData="M60.5,79
                           a5.5,5.5 0 1 0 11,0
