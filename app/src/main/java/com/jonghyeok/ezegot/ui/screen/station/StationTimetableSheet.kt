@@ -360,10 +360,12 @@ private fun MinuteCell(minute: String, express: Boolean, color: Color) {
             textAlign = TextAlign.Center
         )
         if (express) {
+            // 빨강은 도착 임박에만 쓴다. 급행은 긴급이 아니라 열차 종류이고,
+            // 9호선처럼 급행이 절반인 시간대에서는 강조색이 절반을 덮어 강조가 안 된다.
             Text(
                 text = "급",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                color = MaterialTheme.colorScheme.error,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 2.dp)
             )
         }
@@ -407,16 +409,17 @@ private fun NextTrainRow(
             )
             if (schedule.isExpressTrain()) {
                 Spacer(Modifier.width(5.dp))
+                // 시간대 구간의 "급"과 같은 이유로 빨강을 쓰지 않는다
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(5.dp))
-                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
                     Text(
                         text = "급행",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
