@@ -1,9 +1,22 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
 }
+
+// ── API 키 로딩 ───────────────────────────────────────────────────
+// 키는 소스에 두지 않고 프로젝트 루트 local.properties(.gitignore 대상)에서 읽는다.
+// 필요한 키 목록은 local.properties.example 참고.
+// 키가 없어도 빌드는 통과하며, 해당 API 호출만 실패한다.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun apiKey(name: String): String = localProperties.getProperty(name) ?: ""
 
 android {
     namespace = "com.jonghyeok.ezegot"
@@ -20,6 +33,20 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // 서울 열린데이터광장 – 전체 역 목록, 실시간 도착 정보
+        buildConfigField("String", "SEOUL_OPEN_API_KEY", "\"${apiKey("SEOUL_OPEN_API_KEY")}\"")
+        // 서울 열린데이터광장 – 역별 시간표(SearchSTNTimeTableByFRCodeService)
+        buildConfigField("String", "SEOUL_TIMETABLE_API_KEY", "\"${apiKey("SEOUL_TIMETABLE_API_KEY")}\"")
+        // 서울 교통 데이터(t-data) – 역 위경도
+        buildConfigField("String", "TAIMS_API_KEY", "\"${apiKey("TAIMS_API_KEY")}\"")
+        // 공공데이터포털 TAGO – 시간표 폴백
+        buildConfigField("String", "DATA_GO_KR_SERVICE_KEY", "\"${apiKey("DATA_GO_KR_SERVICE_KEY")}\"")
+
+        // Google Maps – AndroidManifest의 ${MAPS_API_KEY} 자리에 주입된다.
+        // BuildConfig가 아니라 매니페스트 플레이스홀더인 이유는, 지도 SDK가
+        // 매니페스트 meta-data에서 키를 직접 읽기 때문이다.
+        manifestPlaceholders["MAPS_API_KEY"] = apiKey("MAPS_API_KEY")
     }
 
     buildTypes {
@@ -40,6 +67,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.3"

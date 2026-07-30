@@ -2,6 +2,7 @@ package com.jonghyeok.ezegot.repository
 
 import com.jonghyeok.ezegot.api.StationInfoResponse
 import com.jonghyeok.ezegot.api.SubwayApiService
+import com.jonghyeok.ezegot.di.ApiKeys
 import com.jonghyeok.ezegot.dto.RealtimeArrival
 import com.jonghyeok.ezegot.dto.StationInfo
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +27,8 @@ import javax.inject.Singleton
 class MainRepository @Inject constructor(
     @Named("stationInfoApi")     private val stationInfoApi: SubwayApiService,
     @Named("realtimeArrivalApi") private val realtimeApi: SubwayApiService,
-    @Named("stationLocationApi") private val locationApi: SubwayApiService
+    @Named("stationLocationApi") private val locationApi: SubwayApiService,
+    private val apiKeys: ApiKeys
 ) {
 
     // ── In-memory cache ───────────────────────────────────────────
@@ -47,7 +49,7 @@ class MainRepository @Inject constructor(
 
     private suspend fun fetchStationsFromApi(): List<StationInfo> =
         runCatching {
-            withContext(Dispatchers.IO) { stationInfoApi.getStations().stationList }
+            withContext(Dispatchers.IO) { stationInfoApi.getStations(apiKeys.seoulOpen).stationList }
         }.getOrDefault(emptyList())
 
     // ── 역 위경도 목록 (캐시) ─────────────────────────────────────
@@ -61,7 +63,7 @@ class MainRepository @Inject constructor(
     private suspend fun fetchLocationsFromApi(): List<StationInfoResponse> =
         runCatching {
             withContext(Dispatchers.IO) {
-                locationApi.getStationsLocation().body() ?: emptyList()
+                locationApi.getStationsLocation(apiKeys.taims).body() ?: emptyList()
             }
         }.getOrDefault(emptyList())
 
@@ -72,13 +74,7 @@ class MainRepository @Inject constructor(
     suspend fun getRealtimeArrival(stationName: String): List<RealtimeArrival> {
         val normalizedName = if (stationName == "서울역") "서울" else stationName
         return runCatching {
-            withContext(Dispatchers.IO) { realtimeApi.getStationArrivalInfo(normalizedName).arrivals }
+            withContext(Dispatchers.IO) { realtimeApi.getStationArrivalInfo(apiKeys.seoulOpen, normalizedName).arrivals }
         }.getOrDefault(emptyList())
-    }
-
-    // ── 캐시 명시적 무효화 (예: pull-to-refresh) ─────────────────
-    fun invalidateCache() {
-        cachedStations = null
-        cachedLocations = null
     }
 }

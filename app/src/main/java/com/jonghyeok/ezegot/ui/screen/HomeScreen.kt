@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -36,16 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import com.google.maps.android.compose.MarkerComposable
-import com.jonghyeok.ezegot.R
 import com.jonghyeok.ezegot.SubwayLine
 import com.jonghyeok.ezegot.dto.BasicStationInfo
 import com.jonghyeok.ezegot.dto.NearbyStation
@@ -54,7 +49,6 @@ import com.jonghyeok.ezegot.ui.theme.*
 import com.jonghyeok.ezegot.viewModel.MainViewModel
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import kotlin.math.abs
 
 // ── 탭 정의 ──────────────────────────────────────────────────────
 internal enum class HomeTab(val label: String) { FAVORITE("즐겨찾기"), NEARBY("근처 역") }
@@ -190,28 +184,20 @@ internal fun HomeTabBar(selectedTab: HomeTab, onTabSelected: (HomeTab) -> Unit) 
                     color = if (isSelected) SkyBlue400 else TextOnDark.copy(alpha = 0.4f)
                 )
             }
-            if (isSelected) {
-                // 선택 탭 하단 인디케이터는 Row 레이아웃 특성상
-                // 별도 오버레이 없이 색상 차이로만 표현 (심플하고 성능 좋음)
-            }
         }
     }
 
-    // 탭 하단 선택 인디케이터
+    // 탭 하단 선택 인디케이터 – 선택된 탭 쪽으로 정렬만 바꿔 표현
     Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Navy700)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.5f)
                 .fillMaxHeight()
-                .offset(x = if (selectedTab == HomeTab.FAVORITE) 0.dp else with(LocalDensity) { 0.dp })
                 .background(SkyBlue400)
                 .align(if (selectedTab == HomeTab.FAVORITE) Alignment.CenterStart else Alignment.CenterEnd)
         )
     }
 }
-
-// Density 접근을 위한 임시 helper
-private val LocalDensity get() = androidx.compose.ui.platform.LocalDensity
 
 // ── 즐겨찾기 탭 ──────────────────────────────────────────────────
 @Composable

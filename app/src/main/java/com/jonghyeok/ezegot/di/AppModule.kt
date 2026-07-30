@@ -2,6 +2,7 @@ package com.jonghyeok.ezegot.di
 
 import android.content.Context
 import androidx.room.Room
+import com.jonghyeok.ezegot.BuildConfig
 import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.db.AppDatabase
 import com.jonghyeok.ezegot.db.FavoriteStationDao
@@ -23,6 +24,20 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    // ─── API 키 ───────────────────────────────────────────────────────────────
+    /**
+     * 실제 값은 local.properties → BuildConfig 경로로 들어온다.
+     * BuildConfig 참조를 이 함수 하나로 모아, Repository는 [ApiKeys]만 주입받는다.
+     */
+    @Provides
+    @Singleton
+    fun provideApiKeys(): ApiKeys = ApiKeys(
+        seoulOpen      = BuildConfig.SEOUL_OPEN_API_KEY,
+        seoulTimetable = BuildConfig.SEOUL_TIMETABLE_API_KEY,
+        taims          = BuildConfig.TAIMS_API_KEY,
+        tago           = BuildConfig.DATA_GO_KR_SERVICE_KEY
+    )
 
     // ─── OkHttp ───────────────────────────────────────────────────────────────
     @Provides

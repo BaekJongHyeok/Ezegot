@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.jonghyeok.ezegot.BuildConfig
 import com.jonghyeok.ezegot.api.SubwayApiService
 import com.jonghyeok.ezegot.db.AppDatabase
 import com.jonghyeok.ezegot.dto.RealtimeArrival
@@ -41,7 +42,10 @@ class ArrivalWidgetUpdateWorker(
                 favorites.map { fav ->
                     async {
                         val arrivals = runCatching {
-                            api.getStationArrivalInfo(fav.stationName).arrivals
+                            api.getStationArrivalInfo(
+                                BuildConfig.SEOUL_OPEN_API_KEY,
+                                fav.stationName
+                            ).arrivals
                         }.getOrDefault(emptyList())
                         FavoriteArrivalInfo(fav.stationName, fav.lineNumber, arrivals)
                     }

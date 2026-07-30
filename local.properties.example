@@ -1,0 +1,39 @@
+# Ezegot – API 키 설정 예시
+#
+# 이 파일을 프로젝트 루트에 `local.properties`로 복사한 뒤 각 값을 채운다.
+# `local.properties`는 .gitignore 대상이므로 커밋되지 않는다.
+#
+# 키가 비어 있어도 빌드는 통과하지만, 해당 API를 쓰는 기능이 동작하지 않는다.
+#
+# Android Studio가 관리하는 sdk.dir 등 다른 항목과 같은 파일에 함께 두면 된다.
+
+# ── 서울 열린데이터광장 ────────────────────────────────────────────
+# https://data.seoul.go.kr 에서 발급
+#
+# SEOUL_OPEN_API_KEY   : 전체 역 목록(SearchInfoBySubwayNameService),
+#                        실시간 도착 정보(realtimeStationArrival)
+# SEOUL_TIMETABLE_API_KEY : 역별 시간표(SearchSTNTimeTableByFRCodeService)
+#                        첫차/막차 조회에 사용
+SEOUL_OPEN_API_KEY=
+SEOUL_TIMETABLE_API_KEY=
+
+# ── 서울 교통 데이터 (t-data) ──────────────────────────────────────
+# https://t-data.seoul.go.kr 에서 발급
+# 역 위경도 조회(TaimsKsccDvSubwayStationGeom)에 사용
+TAIMS_API_KEY=
+
+# ── 공공데이터포털 (data.go.kr) ────────────────────────────────────
+# https://www.data.go.kr 에서 "국토교통부 TAGO_지하철정보" 활용 신청 후 발급
+# 서울 시간표 API가 데이터를 주지 않는 노선(코레일 등)의 폴백에 사용
+#
+# 주의: URL 인코딩된 Encoding 키를 그대로 넣는다 (%2F, %2B, %3D 포함).
+#       Retrofit에서 encoded = true로 전달하므로 재인코딩하지 않는다.
+DATA_GO_KR_SERVICE_KEY=
+
+# ── Google Maps ───────────────────────────────────────────────────
+# https://console.cloud.google.com 에서 Maps SDK for Android 키 발급
+# AndroidManifest의 ${MAPS_API_KEY} 자리에 주입된다 (manifestPlaceholders).
+#
+# 주의: 이 키는 노출 시 실제 과금이 발생할 수 있다.
+#       Google Cloud 콘솔에서 패키지명 + SHA-1 지문으로 사용 제한을 걸어둘 것.
+MAPS_API_KEY=
